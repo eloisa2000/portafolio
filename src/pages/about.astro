@@ -1,0 +1,241 @@
+---
+// src/pages/about.astro
+import Layout from '../layouts/Layout.astro'
+import { getProfile, urlFor } from '../lib/sanity'
+
+const profile = await getProfile()
+
+const aboutTitle = profile?.aboutTitle_en ?? 'About'
+const aboutText = profile?.aboutText_en ?? ''
+
+const likesTitle = profile?.likesTitle_en ?? 'Likes'
+const likes = (profile?.likes_en ?? []).filter((l: string) => l && l.trim().length > 0)
+
+// Las dos imágenes del final (pueden ser 0, 1 o 2 según lo que cargues en Sanity)
+const aboutImages = (profile?.aboutImages ?? []).filter((img: any) => img?.asset)
+
+// Exhibitions & Screenings, ordenadas por año descendente
+const exhibitions = (profile?.exhibitions ?? [])
+  .filter((e: any) => e?.title)
+  .sort((a: any, b: any) => (b.year ?? 0) - (a.year ?? 0))
+---
+
+<Layout title={`About — ${profile?.name ?? 'Eloísa Nieto'}`}>
+  <div class="about-page">
+    <h1 class="about-title">{aboutTitle}</h1>
+
+    {aboutText && (
+      <div class="about-block">
+        <p class="about-text">{aboutText}</p>
+      </div>
+    )}
+
+    {likes.length > 0 && (
+      <section class="likes-section">
+        <h2 class="likes-title">{likesTitle}</h2>
+        <ul class="likes-list">
+          {likes.map((item: string) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {aboutImages.length > 0 && (
+      <div class={`about-images ${aboutImages.length === 1 ? 'single' : ''}`}>
+        {aboutImages.map((img: any) => (
+          <figure class="about-image">
+            <img
+              src={urlFor(img).width(1400).url()}
+              alt={img.caption ?? profile?.name ?? ''}
+              loading="lazy"
+            />
+            {img.caption && <figcaption>{img.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    )}
+
+    {exhibitions.length > 0 && (
+      <section class="exhibitions-section">
+        <h2 class="exhibitions-title">Exhibitions &amp; Screenings</h2>
+        <ul class="exhibitions-list">
+          {exhibitions.map((e: any) => (
+            <li class="exhibition-row">
+              <span class="exhibition-year">{e.year}</span>
+              <span class="exhibition-body">
+                <strong class="exhibition-name">{e.title}.</strong>
+                {e.venue && <span class="exhibition-venue"> {e.venue}.</span>}
+                {e.city && <span class="exhibition-city"> {e.city}.</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .about-page {
+    max-width: 720px;
+    padding: 1rem 0 4rem;
+  }
+
+  .about-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 400;
+    color: var(--indigo);
+    margin: 0 0 2.5rem;
+    line-height: 1.1;
+  }
+
+  .about-block {
+    margin-bottom: 3rem;
+  }
+
+  .about-text {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--indigo);
+    margin: 0;
+  }
+
+  .likes-section {
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .likes-title {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--lila);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 1rem;
+  }
+
+  .likes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .likes-list li {
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    color: var(--indigo);
+    padding-left: 1.25rem;
+    position: relative;
+  }
+
+  .likes-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--lila);
+  }
+
+  .about-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+    max-width: none;
+  }
+
+  .about-images.single {
+    grid-template-columns: 1fr;
+    max-width: 720px;
+  }
+
+  .about-image {
+    margin: 0;
+  }
+
+  .about-image img {
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+  }
+
+  .about-image figcaption {
+    font-size: 0.875rem;
+    color: var(--lila);
+    margin-top: 0.5rem;
+  }
+
+  /* ── Exhibitions & Screenings ─────────────────── */
+  .exhibitions-section {
+    margin-top: 4rem;
+    /* Se sale del max-width del .about-page para tener más aire,
+       pero sin pasarse del main del Layout. */
+    max-width: 960px;
+  }
+
+  .exhibitions-title {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--lila);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--lila) 35%, transparent);
+  }
+
+  .exhibitions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .exhibition-row {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1.5rem;
+    align-items: baseline;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--lila) 35%, transparent);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .exhibition-row:last-child {
+    border-bottom: none;
+  }
+
+  .exhibition-year {
+    color: var(--lila);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .exhibition-body {
+    color: var(--indigo);
+  }
+
+  .exhibition-name {
+    font-weight: 400;
+  }
+
+  .exhibition-venue,
+  .exhibition-city {
+    color: var(--indigo);
+  }
+
+  @media (max-width: 700px) {
+    .about-images {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .exhibition-row {
+      grid-template-columns: 3rem 1fr;
+      gap: 1rem;
+      font-size: 0.875rem;
+    }
+  }
+</style>

@@ -1,0 +1,512 @@
+---
+// src/layouts/Layout.astro
+import { getProfile, urlFor } from '../lib/sanity'
+
+const profile = await getProfile()
+
+interface Props {
+  title?: string
+}
+
+const { title = 'Eloísa Nieto' } = Astro.props
+const currentPath = Astro.url.pathname
+
+function highlightBio(bio: string) {
+  if (!bio) return ''
+  return bio
+    .replace(/\blooks\b/gi, '<span class="serif">$&</span>')
+    .replace(/\bworks\b/gi, '<span class="serif">$&</span>')
+}
+
+const bioHtml = highlightBio(profile?.bio_en ?? '')
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <script is:inline>
+      // Lo antes posible: fija el esquema oscuro sobre <html> para que no haya
+      // parpadeo blanco al navegar entre paginas en modo oscuro.
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark')
+        document.documentElement.style.colorScheme = 'dark'
+      }
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+
+    <script is:inline>
+      // El modo oscuro ya se aplico en el head. Aqui solo la tipografia.
+      if (localStorage.getItem('font') === 'serif') document.body.classList.add('serif-mode')
+    </script>
+
+    <header class="top-nav">
+      <a href="/" class="site-name">{profile?.name ?? 'Eloísa Nieto'}</a>
+      <nav class="nav-links">
+        <a href="/" class={(currentPath === '/' || currentPath === '' || currentPath.startsWith('/work')) && !currentPath.startsWith('/about') ? 'active' : ''}>Work</a>
+        <a href="/about" class={currentPath.startsWith('/about') ? 'active' : ''}>About</a>
+      </nav>
+      <div class="nav-right">
+        <button class="icon-btn" id="font-toggle" aria-label="Change typography">
+          <svg class="arrow-sans" width="23" height="14" viewBox="0 0 23 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.64062 13.2812L0 6.64062L6.64062 0L8.28125 1.65039L4.49219 5.44922H18.3984L14.5898 1.65039L16.2402 0L22.8711 6.64062L16.2402 13.2812L14.5898 11.6309L18.3984 7.8418H4.49219L8.28125 11.6309L6.64062 13.2812Z" fill="currentColor"/>
+          </svg>
+          <svg class="arrow-serif" width="19" height="8" viewBox="0 0 19 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18.4473 3.30078V3.74023C17.8353 4.02018 17.2331 4.39779 16.6406 4.87305C16.0482 5.34831 15.3288 6.06771 14.4824 7.03125H13.7012C14.1504 5.91146 14.7819 4.89909 15.5957 3.99414H2.85156C3.66536 4.89909 4.29688 5.91146 4.74609 7.03125H3.96484C3.11849 6.06771 2.39909 5.34831 1.80664 4.87305C1.21419 4.39779 0.611979 4.02018 0 3.74023V3.30078C0.611979 3.01432 1.21419 2.63672 1.80664 2.16797C2.39909 1.69271 3.11849 0.970052 3.96484 0H4.74609C4.29688 1.11979 3.66536 2.13216 2.85156 3.03711H15.5957C14.7819 2.13216 14.1504 1.11979 13.7012 0H14.4824C15.3288 0.970052 16.0482 1.69271 16.6406 2.16797C17.2331 2.63672 17.8353 3.01432 18.4473 3.30078Z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+          <svg class="ast-sans" width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.34545 14.2206L5.66788 9.43515L1.68 12.1164L0 9.23152L4.3103 7.12727L0 5.02303L1.68 2.10424L5.66788 4.78545L5.34545 0H8.65454L8.34909 4.78545L12.337 2.10424L14 5.02303L9.70667 7.12727L14 9.23152L12.337 12.1164L8.34909 9.43515L8.65454 14.2206H5.34545Z" fill="currentColor"/>
+          </svg>
+          <svg class="ast-serif" width="11" height="13" viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.18511 5.61596C5.14549 4.93254 5.00682 4.25407 4.76911 3.58055C4.43235 2.60989 4.26397 1.94132 4.26397 1.57485C4.26397 1.0598 4.38283 0.668567 4.62054 0.40114C4.86816 0.133713 5.17025 0 5.52682 0C5.83386 0 6.10129 0.133713 6.3291 0.40114C6.55691 0.668567 6.67081 1.0499 6.67081 1.54513C6.67081 1.99084 6.5371 2.61484 6.26967 3.41712C6.01215 4.20949 5.85367 4.94244 5.79424 5.61596C6.339 5.2693 6.82928 4.84835 7.26509 4.35311C7.93861 3.57064 8.4388 3.08531 8.76565 2.89712C9.09251 2.70893 9.42431 2.61484 9.76107 2.61484C10.0879 2.61484 10.3603 2.72874 10.5782 2.95655C10.806 3.17445 10.9199 3.43693 10.9199 3.74397C10.9199 4.11045 10.7565 4.4373 10.4296 4.72454C10.1028 5.01177 9.28565 5.29901 7.97823 5.58625C7.21557 5.75463 6.58167 5.94777 6.07653 6.16567C6.59157 6.4331 7.22052 6.63614 7.96337 6.77481C9.16184 6.99271 9.94431 7.26509 10.3108 7.59195C10.6872 7.9188 10.8754 8.27537 10.8754 8.66165C10.8754 8.95879 10.7614 9.21632 10.5336 9.43422C10.3157 9.65212 10.0582 9.76107 9.76107 9.76107C9.46393 9.76107 9.13213 9.65707 8.76565 9.44908C8.40908 9.24108 7.92375 8.77556 7.30966 8.05251C6.90357 7.56718 6.39843 7.11157 5.79424 6.68567C5.81405 7.25023 5.92796 7.86433 6.13596 8.52794C6.49252 9.69669 6.67081 10.494 6.67081 10.9199C6.67081 11.3161 6.55195 11.6529 6.31424 11.9302C6.07653 12.1976 5.82396 12.3313 5.55653 12.3313C5.19006 12.3313 4.85825 12.1877 4.56111 11.9005C4.35311 11.6925 4.24911 11.3607 4.24911 10.9051C4.24911 10.4296 4.36302 9.86012 4.59082 9.19651C4.81863 8.52299 4.96225 8.06242 5.02168 7.8148C5.08111 7.55728 5.13558 7.1809 5.18511 6.68567C4.60073 7.07195 4.09064 7.5028 3.65483 7.97823C2.93179 8.79041 2.38703 9.30546 2.02056 9.52336C1.76303 9.68184 1.49561 9.76107 1.21828 9.76107C0.881517 9.76107 0.594281 9.64717 0.356569 9.41936C0.118856 9.19155 0 8.93898 0 8.66165C0 8.41404 0.0990469 8.15651 0.297141 7.88909C0.505139 7.61176 0.812185 7.38395 1.21828 7.20566C1.4857 7.08681 2.09484 6.92833 3.04569 6.73024C3.65978 6.60148 4.25902 6.41329 4.84339 6.16567C4.30854 5.89824 3.66969 5.69025 2.92684 5.54168C1.70856 5.28415 0.955803 5.05139 0.668567 4.84339C0.222856 4.51654 0 4.12035 0 3.65483C0 3.3874 0.108952 3.14474 0.326855 2.92684C0.554663 2.69903 0.817137 2.58512 1.11428 2.58512C1.44113 2.58512 1.7878 2.68912 2.15427 2.89712C2.52074 3.10512 2.97636 3.52607 3.52112 4.15997C4.06588 4.78397 4.62054 5.2693 5.18511 5.61596Z" fill="currentColor"/>
+          </svg>
+          <svg class="ast-circle" width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.34545 14.2206L3.32104 13.5L1.68 12.1164L0 9.23152V7.12727V5.02303L1.68 2.10424L3.5 1.03058L5.34545 0H8.65454L10.517 1.03058L12.337 2.10424L14 5.02303V7.12727V9.23152L12.337 12.1164L10.6959 13.5L8.65454 14.2206H5.34545Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <aside class="sidebar">
+        <div class="profile-header">
+          {profile?.photo && (
+            <img
+              class="profile-photo"
+              src={urlFor(profile.photo).width(180).height(180).fit('crop').url()}
+              alt={profile.name}
+            />
+          )}
+          <p class="profile-bio" set:html={bioHtml}></p>
+        </div>
+
+        <div class="sidebar-content">
+          <slot name="sidebar" />
+        </div>
+
+        <!-- FOOTER que solo se muestra en desktop, dentro del sidebar -->
+        <footer class="footer footer-desktop">
+          <a href="https://another-meditation-timer.figma.site/" target="_blank" rel="noopener" class="meditate-link">
+            meditate for free
+          </a>
+          <hr />
+          <div class="footer-row">
+            <div class="footer-col">
+              {profile?.email && (
+                <a href={`mailto:${profile.email}`} class="link-underline">{profile.email}</a>
+              )}
+              <div class="footer-social">
+                {profile?.linkedin && (
+                  <a href={profile.linkedin} target="_blank" rel="noopener" class="link-underline">in</a>
+                )}
+                {profile?.instagram && (
+                  <a href={profile.instagram} target="_blank" rel="noopener" class="link-underline">ig</a>
+                )}
+              </div>
+            </div>
+            <div class="footer-col right">
+              {profile?.location_en && <span>{profile.location_en}</span>}
+              <span id="clock-desktop" class="clock"></span>
+            </div>
+          </div>
+        </footer>
+      </aside>
+
+      <main class="main-content">
+        <slot />
+      </main>
+
+    </div>
+
+    <!-- FOOTER que solo se muestra en mobile, al final de la página -->
+    <footer class="footer footer-mobile">
+      <a href="https://another-meditation-timer.figma.site/" target="_blank" rel="noopener" class="meditate-link">
+        meditate for free
+      </a>
+      <hr />
+      <div class="footer-row">
+        <div class="footer-col">
+          {profile?.email && (
+            <a href={`mailto:${profile.email}`} class="link-underline">{profile.email}</a>
+          )}
+          <div class="footer-social">
+            {profile?.linkedin && (
+              <a href={profile.linkedin} target="_blank" rel="noopener" class="link-underline">in</a>
+            )}
+            {profile?.instagram && (
+              <a href={profile.instagram} target="_blank" rel="noopener" class="link-underline">ig</a>
+            )}
+          </div>
+        </div>
+        <div class="footer-col right">
+          {profile?.location_en && <span>{profile.location_en}</span>}
+          <span id="clock-mobile" class="clock"></span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      import Lenis from 'lenis'
+
+      const lenis = new Lenis({
+        duration: 1.1,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        syncTouch: false,
+      })
+
+      function raf(time: number) {
+        lenis.raf(time)
+        requestAnimationFrame(raf)
+      }
+      requestAnimationFrame(raf)
+
+      // Actualiza ambos relojes (desktop + mobile)
+      function updateClock() {
+        const now = new Date()
+        const utc = now.getTime() + now.getTimezoneOffset() * 60000
+        const santiago = new Date(utc - 4 * 3600000)
+        const hh = String(santiago.getHours()).padStart(2, '0')
+        const mm = String(santiago.getMinutes()).padStart(2, '0')
+        const text = `${hh}:${mm} UTC -4`
+        const desktop = document.getElementById('clock-desktop')
+        const mobile = document.getElementById('clock-mobile')
+        if (desktop) desktop.textContent = text
+        if (mobile) mobile.textContent = text
+      }
+      updateClock()
+      setInterval(updateClock, 1000)
+
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark')
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+        localStorage.setItem('theme', isDark ? 'dark' : 'light')
+      })
+      document.getElementById('font-toggle')?.addEventListener('click', () => {
+        const isSerif = document.body.classList.toggle('serif-mode')
+        localStorage.setItem('font', isSerif ? 'serif' : 'sans')
+      })
+    </script>
+  </body>
+</html>
+
+<style is:global>
+
+  html.lenis, html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --font: 'Inter Tight', sans-serif;
+    --font-serif: 'Times New Roman', Times, serif;
+    --indigo: #1e1a8e;
+    --lila: #8280b2;
+    --bg: #fff9f9;
+  }
+
+  ::selection {
+    background: #1a1937;
+    color: #fff9f9;
+  }
+
+  html, body {
+    font-family: var(--font);
+    font-size: 16px;
+    color: var(--indigo);
+    background: var(--bg);
+    font-size-adjust: none;
+    overscroll-behavior: none;
+  }
+
+  html.dark {
+    --indigo: #fff9f9;
+    --lila: #8280b2;
+    --bg: #1a1937;
+    color-scheme: dark;
+  }
+
+  html.dark ::selection {
+    background: #fff9f9;
+    color: #1a1937;
+  }
+
+  body.serif-mode {
+    --font: 'Times New Roman', Times, serif;
+    font-size-adjust: 0.47;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: color 0.35s ease, background-color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .serif { font-family: var(--font-serif); }
+  body.serif-mode .serif { font-family: 'Inter Tight', sans-serif; }
+
+  .link-underline { display: inline-block; }
+
+  /* TOP NAV */
+  .top-nav {
+    display: grid;
+    grid-template-columns: 460px 1fr auto;
+    align-items: center;
+    padding: 1.25rem 2rem 1.25rem 1.75rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .site-name { font-size: 1.25rem; color: var(--indigo); }
+
+  .nav-links {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+  }
+
+  .nav-links a { font-size: 1.25rem; color: var(--lila); }
+  .nav-links a.active { color: var(--indigo); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    color: var(--indigo);
+  }
+
+  #font-toggle { color: var(--lila); }
+
+  #theme-toggle svg { width: 14px; height: 15px; }
+
+  .arrow-serif { display: none; }
+  body.serif-mode .arrow-sans { display: none; }
+  body.serif-mode .arrow-serif { display: block; }
+
+  .ast-serif { display: none; }
+  .ast-circle { display: none; }
+  body.serif-mode .ast-sans { display: none; }
+  body.serif-mode .ast-serif { display: block; }
+  html.dark .ast-sans,
+  html.dark .ast-serif { display: none; }
+  html.dark .ast-circle { display: block; }
+
+  a:hover:not(.project-card a) {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+  .nav-links a:hover,
+  .site-name:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .nav-lang { font-size: 1.25rem; color: var(--indigo); cursor: pointer; }
+
+  /* PAGE BODY */
+  .page-body {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR sticky en desktop, con footer dentro */
+  .sidebar {
+    position: sticky;
+    top: 65px;
+    height: calc(100vh - 65px);
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.75rem;
+    overflow-y: auto;
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 2.4rem;
+  }
+
+  .profile-photo {
+    width: 81px;
+    height: 81px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .profile-bio {
+    font-size: 1.375rem;
+    line-height: 1.15;
+    width: 310px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-content { flex: 1; }
+
+  /* FOOTER — estilos compartidos para ambas versiones */
+  .footer {
+    padding-top: 1.5rem;
+  }
+
+  .footer hr {
+    border: none;
+    border-top: 1px solid var(--indigo);
+    margin-bottom: 0.6rem;
+  }
+
+  .meditate-link {
+    display: block;
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    margin-bottom: 0.6rem;
+  }
+
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 1.0625rem;
+  }
+
+  .footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .footer-col.right { text-align: right; align-items: flex-end; }
+
+  .footer-social {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .clock { color: var(--indigo); }
+
+  /* Footer desktop dentro del sidebar — pegado abajo */
+  .footer-desktop {
+    margin-top: auto;
+  }
+
+  /* Footer mobile fuera del sidebar — escondido en desktop */
+  .footer-mobile {
+    display: none;
+    padding: 1.5rem 1rem 1.5rem;
+  }
+
+  /* MAIN */
+  .main-content {
+    padding: 1.75rem 2rem;
+  }
+
+  /* TAG */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border: 0.5px solid var(--lila);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: var(--indigo);
+    white-space: nowrap;
+  }
+
+  /* MOBILE */
+  @media (max-width: 1000px) {
+    .page-body {
+      grid-template-columns: 1fr;
+    }
+    .top-nav {
+      grid-template-columns: 1fr auto auto;
+      gap: 1rem;
+    }
+    .sidebar {
+      position: static;
+      height: auto;
+      padding-bottom: 0;
+    }
+    .main-content {
+      padding: 1.5rem 1rem;
+    }
+    .profile-header {
+      justify-content: flex-start;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+    .profile-bio {
+      width: auto;
+      max-width: 280px;
+      font-size: clamp(1.1rem, 2.2vw, 1.375rem);
+      flex: 1;
+    }
+    .site-name {
+      font-size: clamp(0.85rem, 2vw, 1.25rem);
+    }
+    .nav-links a {
+      font-size: clamp(0.85rem, 2vw, 1.25rem);
+    }
+    .nav-lang {
+      font-size: clamp(0.85rem, 2vw, 1.25rem);
+    }
+    .nav-links {
+      gap: 0.5rem;
+    }
+
+    /* En mobile: ocultar footer desktop y mostrar footer mobile */
+    .footer-desktop {
+      display: none;
+    }
+    .footer-mobile {
+      display: block;
+    }
+  }
+</style>
