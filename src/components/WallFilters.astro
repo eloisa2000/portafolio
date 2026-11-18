@@ -1,0 +1,90 @@
+---
+// Lista de filtros para un MediaWall. Va en el sidebar de la página.
+// Cada botón muestra un grupo de piezas del muro (ver MediaWall.astro).
+interface Option {
+  value: string
+  label: string
+  count?: number
+}
+interface Props {
+  options: Option[]
+  /** valor del filtro activo al cargar */
+  active: string
+  /** nombre de la lista para lectores de pantalla */
+  label: string
+}
+const { options, active, label } = Astro.props
+---
+
+<ul class="wall-filters" aria-label={label}>
+  {options.map((o) => (
+    <li>
+      <button
+        class:list={['wall-filter', { active: o.value === active }]}
+        type="button"
+        data-group={o.value}
+        aria-pressed={o.value === active ? 'true' : 'false'}
+      >
+        {o.label}{o.count != null && <span class="wall-filter-count">{o.count}</span>}
+      </button>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .wall-filters {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .wall-filter {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.5rem;
+    color: var(--lila);
+    padding: 0;
+    text-align: left;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .wall-filter.active { color: var(--indigo); }
+
+  .wall-filter:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .wall-filter-count {
+    display: inline-block;
+    margin-left: 0.4em;
+    font-size: 0.6em;
+    color: var(--lila);
+    vertical-align: 0.5em;
+    text-decoration: none;
+  }
+
+  @media (max-width: 1000px) {
+    .wall-filters {
+      flex-direction: row;
+      gap: 1rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      /* la fila llega hasta el borde de la pantalla */
+      margin: 0 calc(var(--gutter) * -1);
+      padding: 1rem var(--gutter) 0.15rem;
+    }
+
+    .wall-filters::-webkit-scrollbar { display: none; }
+
+    .wall-filters li { flex-shrink: 0; }
+
+    .wall-filter { font-size: 1.25rem; }
+  }
+</style>

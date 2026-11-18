@@ -8,6 +8,7 @@ export const GET: APIRoute = async ({ site }) => {
   const paths = [
     '/',
     '/workshops/',
+    '/art/',
     '/misc/',
     '/about/',
     ...projects.filter(slugOf).map((p: any) => `/work/${slugOf(p)}/`),

@@ -1,0 +1,407 @@
+---
+// Muro de imágenes y videos en columnas de alto libre, con visor en grande.
+// Lo usan Misc y Art. Los filtros (WallFilters.astro) muestran un grupo a la vez.
+import Img from './Img.astro'
+import { urlFor } from '../lib/sanity'
+
+export interface WallItem {
+  kind: 'image' | 'video'
+  /** grupos a los que pertenece la pieza (los valores de los filtros) */
+  groups: string[]
+  /** imagen de Sanity (con lqip y dims) cuando kind es "image" */
+  image?: any
+  videoUrl?: string
+  /** imagen de Sanity que hace de portada del video */
+  poster?: any
+  title?: string
+  details?: string
+  year?: number
+}
+
+interface Props {
+  items: WallItem[]
+  /** nombre del muro para lectores de pantalla */
+  label: string
+  /** grupo visible al cargar; "all" muestra todo */
+  initialGroup?: string
+  /** guarda el grupo activo en la URL (#grupo) para poder compartirlo */
+  useHash?: boolean
+}
+
+const { items, label, initialGroup = 'all', useHash = false } = Astro.props
+
+// Ancho de cada columna según el layout (ver CSS más abajo)
+const SIZES = '(max-width: 1000px) 50vw, (max-width: 1500px) calc((100vw - 540px) / 2), calc((100vw - 572px) / 3)'
+
+const fullUrl = (image: any) => urlFor(image).width(2400).auto('format').quality(85).url()
+const posterUrl = (image: any) => urlFor(image).width(960).auto('format').quality(75).url()
+
+const inGroup = (item: WallItem) => initialGroup === 'all' || item.groups.includes(initialGroup)
+// Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
+let shown = 0
+---
+
+<section class="media-wall" aria-label={label} data-use-hash={useHash ? '' : undefined}>
+  {items.map((item) => {
+    const video = item.kind === 'video'
+    const visible = inGroup(item)
+    const eager = visible && shown++ < 3
+    const name = item.title || (video ? 'Video' : 'Image')
+    const meta = [item.details, item.year].filter(Boolean).join(', ')
+    const ratio = video ? item.poster?.dims?.aspectRatio : undefined
+    return (
+      <figure class="wall-item" data-groups={item.groups.join(' ')} hidden={!visible}>
+        <button
+          class="wall-open"
+          type="button"
+          aria-label={`Open ${name}`}
+          data-kind={item.kind}
+          data-full={video ? item.videoUrl : fullUrl(item.image)}
+          data-poster={video && item.poster?.asset ? posterUrl(item.poster) : undefined}
+          data-caption={[item.title, meta].filter(Boolean).join(' — ') || undefined}
+        >
+          {video ? (
+            <span
+              class="img-frame wall-video-frame"
+              style={[
+                ratio ? `aspect-ratio:${ratio}` : '',
+                item.poster?.lqip ? `background-image:url(${item.poster.lqip})` : '',
+              ].filter(Boolean).join(';')}
+            >
+              <video
+                muted
+                loop
+                playsinline
+                preload="none"
+                poster={item.poster?.asset ? posterUrl(item.poster) : undefined}
+                data-src={item.videoUrl}
+                aria-hidden="true"
+                tabindex="-1"
+              ></video>
+            </span>
+          ) : (
+            <Img
+              image={item.image}
+              alt={item.title ?? ''}
+              widths={[320, 480, 720, 960, 1400]}
+              sizes={SIZES}
+              eager={eager}
+            />
+          )}
+        </button>
+        {(item.title || meta) && (
+          <figcaption>
+            {item.title && <span class="wall-title">{item.title}</span>}
+            {meta && <span class="wall-meta">{meta}</span>}
+          </figcaption>
+        )}
+      </figure>
+    )
+  })}
+</section>
+
+<!-- Visor: la imagen o el video en grande, con sonido y controles -->
+<dialog class="wall-viewer" aria-label="Viewer" data-lenis-prevent>
+  <div class="viewer-bar">
+    <span class="viewer-count" aria-live="polite"></span>
+    <button class="viewer-btn" type="button" data-action="close">Close</button>
+  </div>
+  <div class="viewer-stage"></div>
+  <div class="viewer-foot">
+    <p class="viewer-caption"></p>
+    <div class="viewer-nav">
+      <button class="viewer-btn" type="button" data-action="prev" aria-label="Previous">←</button>
+      <button class="viewer-btn" type="button" data-action="next" aria-label="Next">→</button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /* MURO — columnas de alto libre: cada pieza conserva su proporción */
+  .media-wall {
+    columns: 3;
+    column-gap: 1.5rem;
+  }
+
+  @media (max-width: 1500px) {
+    .media-wall { columns: 2; }
+  }
+
+  .wall-item {
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
+  }
+
+  .wall-item[hidden] { display: none; }
+
+  .wall-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    font: inherit;
+    color: inherit;
+  }
+
+  .wall-open:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 3px;
+  }
+
+  .wall-video-frame video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .wall-item figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.6rem;
+    margin-top: 0.45rem;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+  }
+
+  .wall-title { color: var(--indigo); }
+  .wall-meta { color: var(--lila); }
+
+  /* VISOR */
+  .wall-viewer {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 1.25rem 2rem 1.5rem 1.75rem;
+    border: none;
+    background: var(--bg);
+    color: var(--indigo);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  .wall-viewer[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+  }
+
+  .wall-viewer::backdrop { background: var(--bg); }
+
+  .viewer-bar,
+  .viewer-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  .viewer-count { font-size: 1.25rem; color: var(--lila); }
+
+  .viewer-caption {
+    font-size: 1.0625rem;
+    line-height: 1.4;
+    min-height: 1.4em;
+  }
+
+  .viewer-nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+  }
+
+  .viewer-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.25rem;
+    color: var(--indigo);
+    padding: 0;
+    line-height: 1.1;
+  }
+
+  .viewer-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .viewer-btn:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  .viewer-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    cursor: zoom-out;
+  }
+
+  .viewer-stage :global(img),
+  .viewer-stage :global(video) {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: default;
+  }
+
+  @media (max-width: 1000px) {
+    .media-wall { column-gap: 1rem; }
+    .wall-item { margin-bottom: 1rem; }
+    .wall-viewer { padding: 1.1rem var(--gutter) 1.25rem; }
+  }
+</style>
+
+<script>
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const wall = document.querySelector<HTMLElement>('.media-wall')
+  const viewer = document.querySelector<HTMLDialogElement>('.wall-viewer')
+  const figures = Array.from(document.querySelectorAll<HTMLElement>('.wall-item'))
+  const openers = figures.map((f) => f.querySelector<HTMLButtonElement>('.wall-open')!)
+
+  // ── Videos del muro: sin sonido, y solo andan mientras están a la vista ──
+  const wallVideos = Array.from(document.querySelectorAll<HTMLVideoElement>('.wall-video-frame video'))
+
+  wallVideos.forEach((video) => {
+    video.addEventListener('loadeddata', () => video.closest('.img-frame')?.classList.add('is-settled'), { once: true })
+  })
+
+  if (!reduceMotion && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement
+          if (entry.isIntersecting && !viewer?.open) {
+            if (!video.src && video.dataset.src) video.src = video.dataset.src
+            video.play().catch(() => {})
+          } else {
+            video.pause()
+          }
+        })
+      },
+      { rootMargin: '200px 0px' }
+    )
+    wallVideos.forEach((video) => observer.observe(video))
+  }
+
+  // ── Filtros: muestran un grupo de piezas a la vez ──
+  const filters = Array.from(document.querySelectorAll<HTMLButtonElement>('.wall-filter'))
+  const useHash = wall?.hasAttribute('data-use-hash') ?? false
+
+  function applyFilter(group: string, updateHash = true) {
+    filters.forEach((b) => {
+      const on = b.dataset.group === group
+      b.classList.toggle('active', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+    figures.forEach((f) => {
+      f.hidden = group !== 'all' && !(f.dataset.groups ?? '').split(' ').includes(group)
+    })
+    if (useHash && updateHash) history.replaceState(null, '', `#${group}`)
+  }
+
+  filters.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyFilter(btn.dataset.group ?? 'all')
+      // al cambiar de grupo se vuelve al inicio del muro
+      window.scrollTo({ top: 0 })
+    })
+  })
+
+  // Enlace directo a un grupo: /art#photography
+  function fromHash() {
+    const group = decodeURIComponent(location.hash.slice(1))
+    if (group && filters.some((b) => b.dataset.group === group)) applyFilter(group, false)
+  }
+  if (useHash) {
+    fromHash()
+    window.addEventListener('hashchange', fromHash)
+  }
+
+  // ── Visor ──
+  const stage = viewer?.querySelector<HTMLElement>('.viewer-stage')
+  const captionEl = viewer?.querySelector<HTMLElement>('.viewer-caption')
+  const countEl = viewer?.querySelector<HTMLElement>('.viewer-count')
+  let current = -1
+
+  // Solo se recorren las piezas visibles con el filtro actual
+  const visible = () => openers.filter((_, i) => !figures[i].hidden)
+
+  function show(index: number) {
+    if (!viewer || !stage) return
+    const list = visible()
+    if (list.length === 0) return
+    current = (index + list.length) % list.length
+    const opener = list[current]
+
+    stage.replaceChildren()
+    if (opener.dataset.kind === 'video') {
+      const video = document.createElement('video')
+      video.src = opener.dataset.full ?? ''
+      if (opener.dataset.poster) video.poster = opener.dataset.poster
+      video.controls = true
+      video.playsInline = true
+      video.loop = true
+      video.autoplay = true
+      stage.append(video)
+    } else {
+      const img = document.createElement('img')
+      img.src = opener.dataset.full ?? ''
+      img.alt = opener.dataset.caption ?? ''
+      stage.append(img)
+    }
+
+    if (captionEl) captionEl.textContent = opener.dataset.caption ?? ''
+    if (countEl) countEl.textContent = `${current + 1} / ${list.length}`
+  }
+
+  openers.forEach((opener) =>
+    opener.addEventListener('click', () => {
+      if (!viewer) return
+      wallVideos.forEach((v) => v.pause())
+      viewer.showModal()
+      show(visible().indexOf(opener))
+    })
+  )
+
+  viewer?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement
+    const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+    if (action === 'close') viewer.close()
+    else if (action === 'prev') show(current - 1)
+    else if (action === 'next') show(current + 1)
+    // click en el espacio vacío alrededor de la pieza: cierra
+    else if (target === stage) viewer.close()
+  })
+
+  viewer?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft') show(current - 1)
+    if (event.key === 'ArrowRight') show(current + 1)
+  })
+
+  viewer?.addEventListener('close', () => {
+    const opener = visible()[current]
+    // al cerrar se corta el video (y su sonido) y vuelven a andar los del muro
+    stage?.replaceChildren()
+    if (!reduceMotion) {
+      wallVideos.forEach((v) => {
+        const r = v.getBoundingClientRect()
+        if (v.src && r.bottom > 0 && r.top < window.innerHeight) v.play().catch(() => {})
+      })
+    }
+    opener?.focus({ preventScroll: true })
+  })
+</script>

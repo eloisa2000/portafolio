@@ -1,0 +1,75 @@
+---
+// Art: obra personal por categorías (Photography, Digital Drawing...).
+// Cada categoría es un documento "artCategory" en Sanity con su lista de piezas;
+// las categorías nuevas aparecen solas en la lista de la izquierda.
+import Layout from '../layouts/Layout.astro'
+import MediaWall, { type WallItem } from '../components/MediaWall.astro'
+import WallFilters from '../components/WallFilters.astro'
+import { getArtCategories, urlFor } from '../lib/sanity'
+
+const categories = (await getArtCategories())
+  .map((cat: any) => ({
+    slug: cat.slug as string,
+    title: (cat.title_en ?? cat.title_es) as string,
+    // descarta lo que quedó sin archivo subido en Sanity
+    items: (cat.items ?? []).filter((item: any) => (item._type === 'artVideo' ? item.videoUrl : item.asset)),
+  }))
+  // una categoría sin piezas no se muestra
+  .filter((cat: any) => cat.slug && cat.items.length > 0)
+
+const items: WallItem[] = categories.flatMap((cat: any) =>
+  cat.items.map((item: any) =>
+    item._type === 'artVideo'
+      ? { kind: 'video', groups: [cat.slug], videoUrl: item.videoUrl, poster: item.poster, title: item.title, details: item.details, year: item.year }
+      : { kind: 'image', groups: [cat.slug], image: item, title: item.title, details: item.details, year: item.year }
+  )
+)
+
+// Al entrar se ve la primera categoría
+const first = categories[0]?.slug
+
+const firstImage = items.find((item) => item.kind === 'image')?.image
+const shareImage = firstImage
+  ? urlFor(firstImage).width(1200).height(630).fit('crop').auto('format').url()
+  : undefined
+
+const names = categories.map((cat: any) => cat.title.toLowerCase())
+const description = names.length > 0
+  ? `Personal work by Eloísa Nieto: ${names.join(', ')}.`
+  : 'Personal work by Eloísa Nieto.'
+---
+
+<Layout title="Art — Eloísa Nieto" description={description} image={shareImage} section="art">
+
+  <div slot="sidebar">
+    {categories.length > 1 && (
+      <WallFilters
+        label="Art categories"
+        active={first}
+        options={categories.map((cat: any) => ({ value: cat.slug, label: cat.title, count: cat.items.length }))}
+      />
+    )}
+  </div>
+
+  <h1 class="visually-hidden">Art</h1>
+
+  {items.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+
+  <MediaWall items={items} label="Art" initialGroup={categories.length > 1 ? first : 'all'} useHash />
+</Layout>
+
+<style>
+  .empty-note {
+    font-size: 1.0625rem;
+    color: var(--lila);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>

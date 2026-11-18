@@ -112,27 +112,16 @@ export async function getMisc() {
 }
 
 // ── Art ────────────────────────────────────────────────────
-export async function getArtWorks() {
-  return client.fetch(`
-    *[_type == "artWork"] | order(category asc, order asc, year desc) {
-      _id,
-      title_es,
-      title_en,
-      slug_es,
-      slug_en,
-      year,
-      category,
-      brief_es,
-      brief_en,
-      coverImage,
-      videoUrl,
-      externalLink
+// Cada categoría ("artCategory") trae su lista de piezas, en el orden en que se ven.
+export async function getArtCategories() {
+  return client.fetch(`*[_type == "artCategory" && published != false] | order(order asc, title_en asc) {
+    _id, title_en, title_es,
+    "slug": slug.current,
+    items[hidden != true]{
+      _key, _type, title, details, year,
+      asset, crop, hotspot, ${IMG_META},
+      "videoUrl": file.asset->url,
+      poster{ asset, ${IMG_META} }
     }
-  `)
-}
-
-export async function getArtWork(slug: string) {
-  return client.fetch(`
-    *[_type == "artWork" && slug_es.current == $slug][0]
-  `, { slug })
+  }`)
 }
