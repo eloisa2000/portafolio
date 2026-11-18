@@ -1,0 +1,16 @@
+---
+import ProjectsPage from '../../components/ProjectsPage.astro'
+import { getWorkshops } from '../../lib/sanity'
+
+// Colección "workshop" de Sanity
+const workshops = await getWorkshops()
+---
+
+<ProjectsPage
+  projects={workshops}
+  title="Workshops — Eloísa Nieto"
+  description="Workshops by Eloísa Nieto on design, video and cinema."
+  section="workshops"
+  basePath="/workshops"
+  label="Workshops"
+/>

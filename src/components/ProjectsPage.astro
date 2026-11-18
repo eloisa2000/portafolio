@@ -1,9 +1,10 @@
 ---
-// Página de listado de proyectos: grilla + filtros + previews al hacer hover.
-// La usan la home (Work) y Workshops, cada una con su propio grupo de proyectos.
+// Página de listado: grilla + filtros + previews al hacer hover.
+// La usan la home (Work, colección "project") y Workshops (colección "workshop").
+// Work filtra por role y sector; Workshops, por sus tags.
 import Layout from '../layouts/Layout.astro'
 import Img from './Img.astro'
-import { urlFor, WORKSHOP_ROLE } from '../lib/sanity'
+import { urlFor, slugOf, WORKSHOP_ROLE } from '../lib/sanity'
 import { fmtRole } from '../lib/labels'
 
 interface Props {
@@ -11,18 +12,23 @@ interface Props {
   title: string
   description?: string
   section: 'work' | 'workshops'
+  /** ruta base de las páginas individuales: "/work" o "/workshops" */
+  basePath: string
   /** nombre de la sección para lectores de pantalla */
   label: string
   /** en la home el encabezado del sidebar es el <h1> */
   headlineAsH1?: boolean
 }
 
-const { projects, title, description, section, label, headlineAsH1 = false } = Astro.props
+const { projects, title, description, section, basePath, label, headlineAsH1 = false } = Astro.props
 
-const roleOrder = ['web-design', 'ui-design', 'brand-identity', 'graphic-design', 'art-direction', 'motion-design', 'development']
+// Etiquetas de cada tarjeta: los workshops usan tags; los proyectos, role
+const tagsOf = (p: any): string[] => (section === 'workshops' ? p.tags : p.role) ?? []
+
+const roleOrder = ['web-design', 'ui-design', 'brand-identity', 'graphic-design', 'art-direction', 'motion-design', 'development', 'video-and-cinema', 'design']
 const sectorOrder = ['Arts & Culture', 'Social Impact', 'Education', 'Health', 'B2B', 'Industry', 'Tech', 'E-Commerce']
 // "workshops" no es un filtro: tiene su propia página
-const rolesInUse = new Set(projects.flatMap((p: any) => p.role ?? []).filter((r: string) => r !== WORKSHOP_ROLE))
+const rolesInUse = new Set(projects.flatMap(tagsOf).filter((r: string) => section === 'workshops' || r !== WORKSHOP_ROLE))
 const sectorsInUse = new Set(projects.flatMap((p: any) => p.sector ?? []))
 
 const allRoles = [...roleOrder.filter(r => rolesInUse.has(r)), ...[...rolesInUse].filter((r: any) => !roleOrder.includes(r))]
@@ -77,6 +83,8 @@ const shareImage = projects[0]?.coverImage
 
   {!headlineAsH1 && <h1 class="visually-hidden">{label}</h1>}
 
+  {projects.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+
   <section class="projects-grid" aria-label={label}>
     {projects.map((project: any, i: number) => {
       const title = project.title_en ?? project.title_es
@@ -84,10 +92,10 @@ const shareImage = projects[0]?.coverImage
       return (
         <article
           class="project-card"
-          data-role={project.role?.join(',')}
+          data-role={tagsOf(project).join(',')}
           data-sector={project.sector?.join(',')}
         >
-          <a href={`/work/${project.slug_en?.current ?? project.slug_es?.current}`}>
+          <a href={`${basePath}/${slugOf(project)}`}>
             <div class="cover-wrap" data-previews={previews.length > 0 ? JSON.stringify(previews) : undefined}>
               {project.coverImage ? (
                 <Img
@@ -105,7 +113,7 @@ const shareImage = projects[0]?.coverImage
             <div class="project-meta">
               <span class="project-year">{project.year}</span>
               <div class="project-tags">
-                {project.role?.map((r: string) => (
+                {tagsOf(project).map((r: string) => (
                   <span class="tag">{fmtRole(r)}</span>
                 ))}
               </div>
@@ -119,6 +127,11 @@ const shareImage = projects[0]?.coverImage
 </Layout>
 
 <style>
+  .empty-note {
+    font-size: 1.0625rem;
+    color: var(--lila);
+  }
+
   .visually-hidden {
     position: absolute;
     width: 1px;

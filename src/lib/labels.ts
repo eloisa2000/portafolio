@@ -13,6 +13,10 @@ const roleLabels: Record<string, string> = {
   'community-management': 'Community Management',
   'type-design': 'Type Design',
   'lettering': 'Lettering',
+  'workshops': 'Workshops',
+  // tags de la colección Workshops
+  'video-and-cinema': 'Video and Cinema',
+  'design': 'Design',
 }
 
 export function fmtRole(val: string) {

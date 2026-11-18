@@ -1,15 +1,15 @@
 ---
 import ProjectsPage from '../components/ProjectsPage.astro'
-import { getProjects, isWork } from '../lib/sanity'
+import { getProjects } from '../lib/sanity'
 
-// Work: todos los proyectos salvo los que son solo workshops
-const projects = (await getProjects()).filter(isWork)
+const projects = await getProjects()
 ---
 
 <ProjectsPage
   projects={projects}
   title="Eloísa Nieto — Web & UI Designer in Santiago, Chile"
   section="work"
+  basePath="/work"
   label="Selected work"
   headlineAsH1
 />

@@ -28,70 +28,73 @@ export async function getProfile() {
   }`)
 }
 
-// ── Proyectos Work ─────────────────────────────────────────
-export async function getProjects() {
-  return client.fetch(`
-    *[_type == "project" && published != false] | order(featured desc, order asc, year desc) {
-      _id,
-      title_es,
-      title_en,
-      slug_es,
-      slug_en,
-      year,
-      role,
-      sector,
-      featured,
-      contextAndChallenge_en,
-      coverImage{ ..., ${IMG_META} },
-      // Imágenes que se muestran al hacer hover sobre la portada:
-      // las marcadas en Sanity con "showInPreview"; si no hay ninguna marcada,
-      // las primeras 4 de la galería.
-      "previews": select(
-        count(gallery[_type == "image" && defined(asset) && showInPreview == true]) > 0 =>
-          gallery[_type == "image" && defined(asset) && showInPreview == true][0...6]{ asset, crop, hotspot },
-        gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
-      )
-    }
-  `)
-}
+// ── Work y Workshops ───────────────────────────────────────
+// Son dos colecciones distintas en Sanity ("project" y "workshop") con la misma
+// estructura. La diferencia: los proyectos se etiquetan con role + sector,
+// y los workshops con tags ("video-and-cinema", "design").
+export type Collection = 'project' | 'workshop'
 
-export async function getProject(slug: string) {
-  return client.fetch(`
-    *[_type == "project" && slug_es.current == $slug][0] {
-      _id,
-      title_es,
-      title_en,
-      slug_es,
-      slug_en,
-      year,
-      agency,
-      role,
-      sector,
-      contextAndChallenge_es,
-      contextAndChallenge_en,
-      solution_es,
-      solution_en,
-      results_es,
-      results_en,
-      gallery,
-      link,
-      coverImage
-    }
-  `, { slug })
-}
-
-// ── Work / Workshops ───────────────────────────────────────
-// Un proyecto va a la página Workshops si tiene el rol "workshops".
-// Va a Work si tiene cualquier otro rol (o ninguno); con ambos, aparece en las dos.
+// El rol "workshops" de un proyecto no se ofrece como filtro: Workshops tiene su propia página
 export const WORKSHOP_ROLE = 'workshops'
 
-export function isWorkshop(project: any) {
-  return (project?.role ?? []).includes(WORKSHOP_ROLE)
+const CARD_FIELDS = `
+  _id,
+  _type,
+  title_es,
+  title_en,
+  slug_es,
+  slug_en,
+  year,
+  role,
+  sector,
+  tags,
+  featured,
+  coverImage{ ..., ${IMG_META} },
+  // Imágenes que se muestran al hacer hover sobre la portada:
+  // las marcadas en Sanity con "showInPreview"; si no hay ninguna marcada,
+  // las primeras 4 de la galería.
+  "previews": select(
+    count(gallery[_type == "image" && defined(asset) && showInPreview == true]) > 0 =>
+      gallery[_type == "image" && defined(asset) && showInPreview == true][0...6]{ asset, crop, hotspot },
+    gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
+  )
+`
+
+function getCollection(type: Collection) {
+  return client.fetch(
+    `*[_type == $type && published != false] | order(featured desc, order asc, year desc) { ${CARD_FIELDS} }`,
+    { type }
+  )
 }
 
-export function isWork(project: any) {
-  const roles: string[] = project?.role ?? []
-  return roles.length === 0 || roles.some((r) => r !== WORKSHOP_ROLE)
+export async function getProjects() {
+  return getCollection('project')
+}
+
+export async function getWorkshops() {
+  return getCollection('workshop')
+}
+
+/** Un proyecto o workshop completo, para su página. Busca por slug_en y, si no, por slug_es. */
+export async function getEntry(type: Collection, slug: string) {
+  return client.fetch(
+    `*[_type == $type && (slug_en.current == $slug || slug_es.current == $slug)]
+      | order(select(slug_en.current == $slug => 0, 1) asc)[0]{
+      _id, _type, title_en, title_es, slug_en, slug_es,
+      year, agency, role, sector, tags,
+      contextAndChallenge_en, solution_en, results_en,
+      contextAndChallenge_es, solution_es, results_es,
+      gallery[]{ _type, _key, caption, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
+      link, linkLabel,
+      coverImage{ ..., ${IMG_META} },
+      credits[]{ role_en, role_es, names }
+    }`,
+    { type, slug }
+  )
+}
+
+export function slugOf(entry: any): string | undefined {
+  return entry?.slug_en?.current ?? entry?.slug_es?.current
 }
 
 // ── Art ────────────────────────────────────────────────────

@@ -1,18 +1,16 @@
 import type { APIRoute } from 'astro'
-import { getProjects } from '../lib/sanity'
+import { getProjects, getWorkshops, slugOf } from '../lib/sanity'
 
 // Sitemap simple. Necesita el dominio del sitio (ver astro.config.mjs):
 // un sitemap solo acepta URLs absolutas, así que sin dominio queda vacío.
 export const GET: APIRoute = async ({ site }) => {
-  const projects = await getProjects()
+  const [projects, workshops] = await Promise.all([getProjects(), getWorkshops()])
   const paths = [
     '/',
     '/workshops/',
     '/about/',
-    ...projects
-      .map((p: any) => p.slug_en?.current ?? p.slug_es?.current)
-      .filter(Boolean)
-      .map((slug: string) => `/work/${slug}/`),
+    ...projects.filter(slugOf).map((p: any) => `/work/${slugOf(p)}/`),
+    ...workshops.filter(slugOf).map((w: any) => `/workshops/${slugOf(w)}/`),
   ]
   const urls = site
     ? paths.map((path) => `  <url><loc>${new URL(path, site).href}</loc></url>`).join('\n')
