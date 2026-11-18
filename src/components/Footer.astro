@@ -1,0 +1,37 @@
+---
+// Footer compartido: se usa dentro del sidebar (desktop) y al final de la página (mobile).
+interface Props {
+  profile: any
+  variant: 'desktop' | 'mobile'
+}
+const { profile, variant } = Astro.props
+---
+
+<footer class={`footer footer-${variant}`}>
+  <a href="https://another-meditation-timer.figma.site/" target="_blank" rel="noopener" class="meditate-link">
+    meditate for free
+  </a>
+  <hr />
+  <div class="footer-row">
+    <div class="footer-col">
+      {profile?.email && (
+        <span class="email-row">
+          <a href={`mailto:${profile.email}`} class="link-underline">{profile.email}</a>
+          <button type="button" class="copy-btn" data-copy={profile.email} aria-label={`Copy ${profile.email}`}>copy</button>
+        </span>
+      )}
+      <div class="footer-social">
+        {profile?.linkedin && (
+          <a href={profile.linkedin} target="_blank" rel="noopener" class="link-underline" aria-label="LinkedIn">in</a>
+        )}
+        {profile?.instagram && (
+          <a href={profile.instagram} target="_blank" rel="noopener" class="link-underline" aria-label="Instagram">ig</a>
+        )}
+      </div>
+    </div>
+    <div class="footer-col right">
+      {profile?.location_en && <span>{profile.location_en}</span>}
+      <span class="clock"></span>
+    </div>
+  </div>
+</footer>
