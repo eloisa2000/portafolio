@@ -43,8 +43,14 @@ export async function getProjects() {
       featured,
       contextAndChallenge_en,
       coverImage{ ..., ${IMG_META} },
-      // primeras imágenes de la galería, para el preview al hacer hover
-      "previews": gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
+      // Imágenes que se muestran al hacer hover sobre la portada:
+      // las marcadas en Sanity con "showInPreview"; si no hay ninguna marcada,
+      // las primeras 4 de la galería.
+      "previews": select(
+        count(gallery[_type == "image" && defined(asset) && showInPreview == true]) > 0 =>
+          gallery[_type == "image" && defined(asset) && showInPreview == true][0...6]{ asset, crop, hotspot },
+        gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
+      )
     }
   `)
 }

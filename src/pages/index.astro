@@ -80,12 +80,6 @@ const shareImage = projects[0]?.coverImage
               ) : (
                 <div class="cover-placeholder" />
               )}
-              {previews.length > 0 && (
-                <div class="preview-ticks" aria-hidden="true">
-                  <span class="on"></span>
-                  {previews.map(() => <span></span>)}
-                </div>
-              )}
             </div>
             <div class="project-meta">
               <span class="project-year">{project.year}</span>
@@ -190,41 +184,11 @@ const shareImage = projects[0]?.coverImage
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transition: opacity 0.45s ease;
+    transition: opacity 1s ease;
     pointer-events: none;
   }
 
   .cover-wrap :global(.preview-img.on) {
-    opacity: 1;
-  }
-
-  /* marcadores: una rayita por imagen, solo visibles durante el hover */
-  .preview-ticks {
-    position: absolute;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.7rem;
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-  }
-
-  .preview-ticks span {
-    flex: 1;
-    height: 2px;
-    background: #faf6f6;
-    opacity: 0.4;
-    box-shadow: 0 0 0 0.5px rgba(26, 25, 55, 0.18);
-    transition: opacity 0.3s ease;
-  }
-
-  .preview-ticks span.on {
-    opacity: 1;
-  }
-
-  .cover-wrap.is-previewing .preview-ticks {
     opacity: 1;
   }
 
@@ -406,12 +370,12 @@ const shareImage = projects[0]?.coverImage
   // Solo en dispositivos con puntero (en touch no existe el hover),
   // y las imágenes recién se descargan la primera vez que se pasa el mouse.
   const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
-  const STEP_MS = 1100
+  // tiempo que se queda cada imagen (incluye el fundido de 1s)
+  const STEP_MS = 2400
 
   if (canHover) {
     document.querySelectorAll<HTMLElement>('.cover-wrap[data-previews]').forEach((wrap) => {
       const urls: string[] = JSON.parse(wrap.dataset.previews ?? '[]')
-      const ticks = wrap.querySelectorAll('.preview-ticks span')
       const link = wrap.closest('a')
       if (urls.length === 0 || !link) return
 
@@ -427,7 +391,7 @@ const shareImage = projects[0]?.coverImage
           img.alt = ''
           img.decoding = 'async'
           img.src = url
-          wrap.insertBefore(img, wrap.querySelector('.preview-ticks'))
+          wrap.appendChild(img)
           return img
         })
       }
@@ -435,7 +399,6 @@ const shareImage = projects[0]?.coverImage
       function show(next: number) {
         index = next
         imgs.forEach((img, i) => img.classList.toggle('on', i === index - 1))
-        ticks.forEach((t, i) => t.classList.toggle('on', i === index))
       }
 
       function advance() {
@@ -453,16 +416,14 @@ const shareImage = projects[0]?.coverImage
       function start() {
         if (timer) return
         load()
-        wrap.classList.add('is-previewing')
         timer = window.setInterval(advance, STEP_MS)
         // el primer cambio llega antes, para que el hover se sienta inmediato
-        window.setTimeout(() => timer && index === 0 && advance(), 350)
+        window.setTimeout(() => timer && index === 0 && advance(), 400)
       }
 
       function stop() {
         window.clearInterval(timer)
         timer = undefined
-        wrap.classList.remove('is-previewing')
         show(0)
       }
 
