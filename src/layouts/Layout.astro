@@ -19,11 +19,10 @@ interface Props {
 
 const name = profile?.name ?? 'Eloísa Nieto'
 
-// Encabezado del sitio. Por ahora vive aquí (prueba de texto nuevo);
-// para volver al texto del CMS basta con usar `profile?.bio_en`.
-const HEADLINE = 'seeking beauty and functionality in the digital world'
-// Palabras del encabezado que van en la tipografía alterna
-const HEADLINE_ACCENTS = ['beauty', 'functionality']
+// Encabezado del sitio: se edita en Sanity (Perfil → bio_en).
+const HEADLINE = profile?.bio_en?.trim() || 'seeking beauty and functionality in the digital world'
+// Palabras del encabezado que van en la tipografía alterna (si aparecen en el texto)
+const HEADLINE_ACCENTS = ['beauty', 'functionality', 'looks', 'works']
 
 const DEFAULT_DESCRIPTION = `${name} is a web and UI designer based in Santiago, Chile, seeking beauty and functionality in the digital world. Web design, brand identity and art direction.`
 
