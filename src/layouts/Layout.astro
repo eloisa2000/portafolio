@@ -14,7 +14,7 @@ interface Props {
   /** Datos estructurados extra (schema.org) propios de la página */
   jsonLd?: Record<string, any>
   /** Sección activa en la navegación (si no se pasa, se deduce de la URL) */
-  section?: 'work' | 'workshops' | 'about'
+  section?: 'work' | 'workshops' | 'misc' | 'about'
   /** En la home el encabezado del sidebar es el <h1> de la página */
   headlineAsH1?: boolean
 }
@@ -40,7 +40,7 @@ const {
 const currentPath = Astro.url.pathname
 const activeSection =
   section ??
-  (currentPath.startsWith('/about') ? 'about' : currentPath.startsWith('/workshops') ? 'workshops' : 'work')
+  (currentPath.startsWith('/about') ? 'about' : currentPath.startsWith('/workshops') ? 'workshops' : currentPath.startsWith('/misc') ? 'misc' : 'work')
 
 function escapeHtml(text: string) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -140,6 +140,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
       <nav class="nav-links" aria-label="Main">
         <a href="/" class={activeSection === 'work' ? 'active' : ''} aria-current={activeSection === 'work' && currentPath === '/' ? 'page' : undefined}>Work</a>
         <a href="/workshops" class={activeSection === 'workshops' ? 'active' : ''}>Workshops</a>
+        <a href="/misc" class={activeSection === 'misc' ? 'active' : ''}>Misc</a>
         <a href="/about" class={activeSection === 'about' ? 'active' : ''}>About</a>
       </nav>
       <div class="nav-right">

@@ -97,6 +97,20 @@ export function slugOf(entry: any): string | undefined {
   return entry?.slug_en?.current ?? entry?.slug_es?.current
 }
 
+// ── Misc ───────────────────────────────────────────────────
+// Documento único con imágenes y videos sueltos, en el orden en que se ven.
+export async function getMisc() {
+  return client.fetch(`*[_type == "misc"][0]{
+    intro_en,
+    items[hidden != true]{
+      _key, _type, caption, year,
+      asset, crop, hotspot, ${IMG_META},
+      "videoUrl": file.asset->url,
+      poster{ asset, ${IMG_META} }
+    }
+  }`)
+}
+
 // ── Art ────────────────────────────────────────────────────
 export async function getArtWorks() {
   return client.fetch(`
