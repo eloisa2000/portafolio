@@ -16,8 +16,9 @@ const { profile, variant } = Astro.props
     <div class="footer-col">
       {profile?.email && (
         <span class="email-row">
-          <a href={`mailto:${profile.email}`} class="link-underline">{profile.email}</a>
-          <button type="button" class="copy-btn" data-copy={profile.email} aria-label={`Copy ${profile.email}`}>copy</button>
+          {/* Con mouse: un click copia el mail (ver Layout). En touch o sin JS: abre el correo. */}
+          <a href={`mailto:${profile.email}`} class="link-underline email-link" data-copy={profile.email}>{profile.email}</a>
+          <span class="copy-hint" aria-live="polite" data-idle="copy">copy</span>
         </span>
       )}
       <div class="footer-social">

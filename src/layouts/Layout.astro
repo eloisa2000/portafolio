@@ -259,19 +259,27 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
           return ok
         }
       }
-      document.querySelectorAll<HTMLButtonElement>('.copy-btn').forEach((btn) => {
-        let timer: number | undefined
-        btn.addEventListener('click', async () => {
-          const ok = await copyText(btn.dataset.copy ?? '')
-          btn.textContent = ok ? 'copied' : 'press ⌘C'
-          btn.classList.toggle('is-copied', ok)
-          window.clearTimeout(timer)
-          timer = window.setTimeout(() => {
-            btn.textContent = 'copy'
-            btn.classList.remove('is-copied')
-          }, 1800)
+      // Con mouse, el click sobre el mail lo copia en vez de abrir el correo.
+      // En pantallas táctiles se mantiene el mailto normal.
+      const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+      if (canHover) {
+        document.querySelectorAll<HTMLAnchorElement>('.email-link').forEach((link) => {
+          const hint = link.parentElement?.querySelector<HTMLElement>('.copy-hint')
+          let timer: number | undefined
+          link.addEventListener('click', async (event) => {
+            event.preventDefault()
+            const ok = await copyText(link.dataset.copy ?? '')
+            if (!hint) return
+            hint.textContent = ok ? 'copied' : 'press ⌘C'
+            hint.classList.add('is-copied')
+            window.clearTimeout(timer)
+            timer = window.setTimeout(() => {
+              hint.classList.remove('is-copied')
+              hint.textContent = hint.dataset.idle ?? 'copy'
+            }, 1800)
+          })
         })
-      })
+      }
 
       // Entrada suave de las imágenes: aparecen con un fundido al terminar de cargar
       document.querySelectorAll<HTMLElement>('.img-frame').forEach((frame) => {
@@ -569,22 +577,23 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     gap: 0.6rem;
   }
 
-  .copy-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font: inherit;
+  /* "copy" aparece al pasar el mouse por el mail; "copied" tras el click */
+  .copy-hint {
     color: var(--lila);
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.35s ease;
+    pointer-events: none;
+    user-select: none;
   }
-  .copy-btn:hover {
-    color: var(--indigo);
-    text-decoration: underline;
-    text-underline-offset: 0px;
-    text-decoration-thickness: 0.12em;
-    text-decoration-skip-ink: none;
+  @media (hover: hover) and (pointer: fine) {
+    html.js .email-link { cursor: copy; }
+    html.js .email-link:hover + .copy-hint,
+    html.js .email-link:focus-visible + .copy-hint,
+    html.js .copy-hint.is-copied {
+      opacity: 1;
+    }
   }
-  .copy-btn.is-copied { color: var(--indigo); }
+  .copy-hint.is-copied { color: var(--indigo); }
 
   .clock { color: var(--indigo); }
 
