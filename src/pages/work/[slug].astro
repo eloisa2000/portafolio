@@ -1,7 +1,9 @@
 ---
 // src/pages/work/[slug].astro
 import Layout from '../../layouts/Layout.astro'
-import { getProject, getProjects, urlFor } from '../../lib/sanity'
+import Img from '../../components/Img.astro'
+import { client, getProjects, urlFor, IMG_META } from '../../lib/sanity'
+import { fmtRole, excerpt } from '../../lib/labels'
 
 export async function getStaticPaths() {
   const projects = await getProjects()
@@ -13,40 +15,24 @@ export async function getStaticPaths() {
 }
 
 const { slug } = Astro.params
-// busca por slug_en primero, luego slug_es como fallback
-const project = await (async () => {
-  const byEn = await import('../../lib/sanity').then(m =>
-    m.client.fetch(
-      `*[_type == "project" && slug_en.current == $slug][0]{
-        _id, title_en, title_es, slug_en, slug_es,
-        year, agency, role, sector,
-        contextAndChallenge_en, solution_en, results_en,
-        contextAndChallenge_es, solution_es, results_es,
-        gallery[]{ _type, _key, caption, asset, videoUrl, isPortrait, halfWidth },
-        link, linkLabel, coverImage,
-        credits[]{ role_en, role_es, names }
-      }`,
-      { slug }
-    )
-  )
-  if (byEn) return byEn
-  return import('../../lib/sanity').then(m =>
-    m.client.fetch(
-      `*[_type == "project" && slug_es.current == $slug][0]{
-        _id, title_en, title_es, slug_en, slug_es,
-        year, agency, role, sector,
-        contextAndChallenge_en, solution_en, results_en,
-        contextAndChallenge_es, solution_es, results_es,
-        gallery[]{ _type, _key, caption, asset, videoUrl, isPortrait, halfWidth },
-        link, linkLabel, coverImage,
-        credits[]{ role_en, role_es, names }
-      }`,
-      { slug }
-    )
-  )
-})()
 
-if (!project) return Astro.redirect('/work')
+// busca por slug_en primero, luego slug_es como fallback
+const project = await client.fetch(
+  `*[_type == "project" && (slug_en.current == $slug || slug_es.current == $slug)]
+    | order(select(slug_en.current == $slug => 0, 1) asc)[0]{
+    _id, title_en, title_es, slug_en, slug_es,
+    year, agency, role, sector,
+    contextAndChallenge_en, solution_en, results_en,
+    contextAndChallenge_es, solution_es, results_es,
+    gallery[]{ _type, _key, caption, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
+    link, linkLabel,
+    coverImage{ ..., ${IMG_META} },
+    credits[]{ role_en, role_es, names }
+  }`,
+  { slug }
+)
+
+if (!project) return Astro.redirect('/')
 
 const title = project.title_en ?? project.title_es
 const context = project.contextAndChallenge_en ?? project.contextAndChallenge_es
@@ -57,37 +43,45 @@ const credits = (project.credits ?? []).filter((c: any) => c?.role_en || c?.role
 // Dos columnas (texto | resultados) solo si hay ambas cosas; si no, una sola.
 const twoCol = (context || solution) && results?.length > 0
 
-// Solo los roles vienen como slugs (web-design, ui-design...) y hay que formatearlos.
-// Los sectores ya vienen como label ("Arts & Culture", "E-Commerce") y se muestran tal cual.
-const roleLabels: Record<string, string> = {
-  'web-design': 'Web Design',
-  'ui-design': 'UI Design',
-  'brand-identity': 'Brand Identity',
-  'graphic-design': 'Graphic Design',
-  'art-direction': 'Art Direction',
-  'motion-design': 'Motion Design',
-  'development': 'Development',
-  'ux-research': 'UX Research',
-  'community-management': 'Community Management',
-  'type-design': 'Type Design',
-  'lettering': 'Lettering',
-}
-
-function fmtRole(val: string) {
-  return roleLabels[val] ?? val.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 // Imágenes válidas (descarta las que quedaron sin asset subido en Sanity)
 const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || item?.videoUrl)
+
+// ── SEO ────────────────────────────────────────────────────
+const roles = (project.role ?? []).map(fmtRole)
+const description =
+  excerpt(context ?? solution) ||
+  `${title}${roles.length ? ` — ${roles.join(', ')}` : ''}${project.year ? ` (${project.year})` : ''}. A project by Eloísa Nieto.`
+const shareImage = project.coverImage
+  ? urlFor(project.coverImage).width(1200).height(630).fit('crop').auto('format').url()
+  : undefined
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: title,
+  description,
+  ...(project.year ? { dateCreated: String(project.year) } : {}),
+  ...(shareImage ? { image: shareImage } : {}),
+  ...(roles.length ? { genre: roles } : {}),
+  creator: { '@type': 'Person', name: 'Eloísa Nieto' },
+}
+
+let imageCount = 0
 ---
 
-<Layout title={`${title} — Eloísa Nieto`}>
+<Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd}>
   <article class="project">
 
     <!-- Portada a ancho completo (hero) -->
     {project.coverImage && (
       <figure class="project-cover">
-        <img src={urlFor(project.coverImage).width(2000).height(875).fit('crop').url()} alt={title} />
+        <Img
+          image={project.coverImage}
+          alt={title}
+          ratio={16 / 7}
+          widths={[640, 1000, 1400, 2000]}
+          sizes="(max-width: 1000px) 100vw, calc(100vw - 524px)"
+          eager
+        />
       </figure>
     )}
 
@@ -163,16 +157,24 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
           const isVideo = item._type === 'galleryVideo' || item?.videoUrl
           const isNarrow = isVideo ? item.isPortrait : item.halfWidth
           const isMp4 = isVideo && /\.(mp4|webm|ogg)(\?.*)?$/i.test(item.videoUrl ?? '')
+          if (!isVideo) imageCount++
           return (
             <figure class={isNarrow ? 'gallery-item narrow' : 'gallery-item'}>
               {isVideo ? (
                 isMp4 ? (
-                  <video src={item.videoUrl} autoplay muted loop playsinline />
+                  <video src={item.videoUrl} autoplay muted loop playsinline preload="metadata" aria-label={item.caption ?? `${title} — video`} />
                 ) : (
                   <iframe src={item.videoUrl} allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title={item.caption ?? 'Video'} />
                 )
               ) : (
-                <img src={urlFor(item).width(1600).url()} alt={item.caption ?? ''} loading="lazy" />
+                <Img
+                  image={item}
+                  alt={item.caption ?? `${title} — image ${imageCount}`}
+                  widths={[640, 960, 1400, 2000]}
+                  sizes={isNarrow
+                    ? '(max-width: 700px) 100vw, (max-width: 1000px) 50vw, calc((100vw - 548px) / 2)'
+                    : '(max-width: 1000px) 100vw, calc(100vw - 524px)'}
+                />
               )}
               {item.caption && <figcaption>{item.caption}</figcaption>}
             </figure>
@@ -216,12 +218,6 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
     margin-bottom: 2.5rem;
   }
 
-  .project-cover img {
-    width: 100%;
-    aspect-ratio: 16 / 7;
-    object-fit: cover;
-    display: block;
-  }
 
   /* BLOQUE DE INFORMACIÓN */
   .project-info {
@@ -379,11 +375,6 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
     width: calc(50% - 0.75rem);
   }
 
-  .gallery-item img {
-    width: 100%;
-    display: block;
-  }
-
   .gallery-item video,
   .gallery-item iframe {
     width: 100%;
@@ -414,6 +405,11 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
     opacity: 0;
     transform: translateY(28px);
     transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  /* las verticales que van de a dos entran una después de la otra */
+  .project-gallery.reveal .gallery-item.narrow + .gallery-item.narrow {
+    transition-delay: 0.12s;
   }
 
   .project-gallery.reveal .gallery-item.in-view {
@@ -508,6 +504,10 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
 
   @media (max-width: 1000px) {
     .project-gallery { gap: 1rem; }
+    .project-cover { margin-bottom: 1.75rem; }
+    .project-info { margin-bottom: 2.5rem; }
+    .project-head { margin-bottom: 1.5rem; }
+    .project-meta { gap: 1.1rem 2rem; }
   }
 </style>
 
@@ -531,5 +531,21 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
     )
 
     gallery.querySelectorAll('.gallery-item').forEach((item) => observer.observe(item))
+  }
+
+  // Los videos solo se reproducen mientras están en pantalla
+  // (ahorra batería y datos, sobre todo en el teléfono).
+  if ('IntersectionObserver' in window) {
+    const videoObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement
+          if (entry.isIntersecting) video.play().catch(() => {})
+          else video.pause()
+        })
+      },
+      { threshold: 0.1 }
+    )
+    document.querySelectorAll<HTMLVideoElement>('.gallery-item video').forEach((v) => videoObserver.observe(v))
   }
 </script>

@@ -16,9 +16,16 @@ export function urlFor(source: SanityImageSource) {
   return builder.image(source)
 }
 
+// Datos extra de cada imagen: miniatura borrosa (lqip) y dimensiones,
+// para reservar el espacio y animar la carga.
+export const IMG_META = `"lqip": asset->metadata.lqip, "dims": asset->metadata.dimensions`
+
 // ── Perfil ─────────────────────────────────────────────────
 export async function getProfile() {
-  return client.fetch(`*[_type == "profile"][0]`)
+  return client.fetch(`*[_type == "profile"][0]{
+    ...,
+    aboutImages[]{ ..., ${IMG_META} }
+  }`)
 }
 
 // ── Proyectos Work ─────────────────────────────────────────
@@ -34,7 +41,10 @@ export async function getProjects() {
       role,
       sector,
       featured,
-      coverImage
+      contextAndChallenge_en,
+      coverImage{ ..., ${IMG_META} },
+      // primeras imágenes de la galería, para el preview al hacer hover
+      "previews": gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
     }
   `)
 }
