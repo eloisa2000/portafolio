@@ -2,7 +2,7 @@
 // src/pages/work/[slug].astro
 import Layout from '../../layouts/Layout.astro'
 import Img from '../../components/Img.astro'
-import { client, getProjects, urlFor, IMG_META } from '../../lib/sanity'
+import { client, getProjects, urlFor, IMG_META, isWork, isWorkshop } from '../../lib/sanity'
 import { fmtRole, excerpt } from '../../lib/labels'
 
 export async function getStaticPaths() {
@@ -65,10 +65,14 @@ const jsonLd = {
   creator: { '@type': 'Person', name: 'Eloísa Nieto' },
 }
 
+// Los proyectos que son solo workshops pertenecen a esa sección
+const section = isWorkshop(project) && !isWork(project) ? 'workshops' : 'work'
+const back = section === 'workshops' ? { href: '/workshops', label: 'Workshops' } : { href: '/', label: 'Work' }
+
 let imageCount = 0
 ---
 
-<Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd}>
+<Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd} section={section}>
   <article class="project">
 
     <!-- Portada a ancho completo (hero) -->
@@ -202,7 +206,7 @@ let imageCount = 0
 
     <!-- Volver -->
     <div class="project-nav">
-      <a href="/">← Back to Work</a>
+      <a href={back.href}>← Back to {back.label}</a>
     </div>
 
   </article>

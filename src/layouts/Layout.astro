@@ -13,6 +13,8 @@ interface Props {
   type?: 'website' | 'article' | 'profile'
   /** Datos estructurados extra (schema.org) propios de la página */
   jsonLd?: Record<string, any>
+  /** Sección activa en la navegación (si no se pasa, se deduce de la URL) */
+  section?: 'work' | 'workshops' | 'about'
   /** En la home el encabezado del sidebar es el <h1> de la página */
   headlineAsH1?: boolean
 }
@@ -33,8 +35,12 @@ const {
   type = 'website',
   jsonLd,
   headlineAsH1 = false,
+  section,
 } = Astro.props
 const currentPath = Astro.url.pathname
+const activeSection =
+  section ??
+  (currentPath.startsWith('/about') ? 'about' : currentPath.startsWith('/workshops') ? 'workshops' : 'work')
 
 function escapeHtml(text: string) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -132,8 +138,9 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     <header class="top-nav">
       <a href="/" class="site-name">{name}</a>
       <nav class="nav-links" aria-label="Main">
-        <a href="/" class={(currentPath === '/' || currentPath === '' || currentPath.startsWith('/work')) && !currentPath.startsWith('/about') ? 'active' : ''}>Work</a>
-        <a href="/about" class={currentPath.startsWith('/about') ? 'active' : ''}>About</a>
+        <a href="/" class={activeSection === 'work' ? 'active' : ''} aria-current={activeSection === 'work' && currentPath === '/' ? 'page' : undefined}>Work</a>
+        <a href="/workshops" class={activeSection === 'workshops' ? 'active' : ''}>Workshops</a>
+        <a href="/about" class={activeSection === 'about' ? 'active' : ''}>About</a>
       </nav>
       <div class="nav-right">
         <button class="icon-btn" id="font-toggle" aria-label="Change typography">
@@ -683,6 +690,20 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     .footer-mobile {
       display: block;
       padding: 1.5rem var(--gutter) max(1.5rem, env(safe-area-inset-bottom));
+    }
+  }
+
+  /* En teléfonos la navegación baja a una segunda fila: nombre + íconos arriba, secciones abajo */
+  @media (max-width: 520px) {
+    .top-nav {
+      grid-template-columns: 1fr auto;
+      row-gap: 0.55rem;
+      padding-bottom: 0.8rem;
+    }
+    .nav-links {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      gap: 0.9rem;
     }
   }
 

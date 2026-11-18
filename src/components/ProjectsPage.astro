@@ -1,0 +1,469 @@
+---
+// Página de listado de proyectos: grilla + filtros + previews al hacer hover.
+// La usan la home (Work) y Workshops, cada una con su propio grupo de proyectos.
+import Layout from '../layouts/Layout.astro'
+import Img from './Img.astro'
+import { urlFor, WORKSHOP_ROLE } from '../lib/sanity'
+import { fmtRole } from '../lib/labels'
+
+interface Props {
+  projects: any[]
+  title: string
+  description?: string
+  section: 'work' | 'workshops'
+  /** nombre de la sección para lectores de pantalla */
+  label: string
+  /** en la home el encabezado del sidebar es el <h1> */
+  headlineAsH1?: boolean
+}
+
+const { projects, title, description, section, label, headlineAsH1 = false } = Astro.props
+
+const roleOrder = ['web-design', 'ui-design', 'brand-identity', 'graphic-design', 'art-direction', 'motion-design', 'development']
+const sectorOrder = ['Arts & Culture', 'Social Impact', 'Education', 'Health', 'B2B', 'Industry', 'Tech', 'E-Commerce']
+// "workshops" no es un filtro: tiene su propia página
+const rolesInUse = new Set(projects.flatMap((p: any) => p.role ?? []).filter((r: string) => r !== WORKSHOP_ROLE))
+const sectorsInUse = new Set(projects.flatMap((p: any) => p.sector ?? []))
+
+const allRoles = [...roleOrder.filter(r => rolesInUse.has(r)), ...[...rolesInUse].filter((r: any) => !roleOrder.includes(r))]
+const allSectors = [...sectorOrder.filter(s => sectorsInUse.has(s)), ...[...sectorsInUse].filter((s: any) => !sectorOrder.includes(s))]
+
+// Proporción de las portadas en la grilla
+const COVER_RATIO = 677 / 437
+const COVER_SIZES = '(max-width: 1000px) 100vw, (max-width: 1300px) calc(100vw - 524px), calc((100vw - 548px) / 2)'
+
+// Imágenes de la galería que se van mostrando al hacer hover sobre la portada
+function previewUrls(project: any) {
+  return (project.previews ?? []).map((img: any) =>
+    urlFor(img).width(960).height(Math.round(960 / COVER_RATIO)).fit('crop').auto('format').quality(75).url()
+  )
+}
+
+const shareImage = projects[0]?.coverImage
+  ? urlFor(projects[0].coverImage).width(1200).height(630).fit('crop').auto('format').url()
+  : undefined
+---
+
+
+<Layout title={title} description={description} image={shareImage} section={section} headlineAsH1={headlineAsH1}>
+
+  <div slot="sidebar" class="filters">
+    {allRoles.length > 0 && (
+    <div class="filter-group left">
+      <ul class="filter-list" aria-label="Filter by discipline">
+        {allRoles.map((role: any) => (
+          <li>
+            <button class="filter-btn" data-filter="role" data-value={role} aria-pressed="false">{fmtRole(role)}</button>
+          </li>
+        ))}
+        <li class="filter-all"><button class="filter-btn active" data-filter="role" data-value="all" aria-pressed="true">All</button></li>
+      </ul>
+    </div>
+    )}
+
+    {allSectors.length > 0 && (
+    <div class="filter-group right">
+      <ul class="filter-list" aria-label="Filter by sector">
+        {allSectors.map((sector: any) => (
+          <li>
+            <button class="filter-btn" data-filter="sector" data-value={sector} aria-pressed="false">{sector}</button>
+          </li>
+        ))}
+        <li class="filter-all"><button class="filter-btn active" data-filter="sector" data-value="all" aria-pressed="true">All</button></li>
+      </ul>
+    </div>
+    )}
+  </div>
+
+  {!headlineAsH1 && <h1 class="visually-hidden">{label}</h1>}
+
+  <section class="projects-grid" aria-label={label}>
+    {projects.map((project: any, i: number) => {
+      const title = project.title_en ?? project.title_es
+      const previews = previewUrls(project)
+      return (
+        <article
+          class="project-card"
+          data-role={project.role?.join(',')}
+          data-sector={project.sector?.join(',')}
+        >
+          <a href={`/work/${project.slug_en?.current ?? project.slug_es?.current}`}>
+            <div class="cover-wrap" data-previews={previews.length > 0 ? JSON.stringify(previews) : undefined}>
+              {project.coverImage ? (
+                <Img
+                  image={project.coverImage}
+                  alt={title}
+                  ratio={COVER_RATIO}
+                  widths={[480, 720, 960, 1400]}
+                  sizes={COVER_SIZES}
+                  eager={i === 0}
+                />
+              ) : (
+                <div class="cover-placeholder" />
+              )}
+            </div>
+            <div class="project-meta">
+              <span class="project-year">{project.year}</span>
+              <div class="project-tags">
+                {project.role?.map((r: string) => (
+                  <span class="tag">{fmtRole(r)}</span>
+                ))}
+              </div>
+            </div>
+            <h2 class="project-title">{title}</h2>
+          </a>
+        </article>
+      )
+    })}
+  </section>
+</Layout>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .filters {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .filter-group.right {
+    text-align: right;
+    margin-left: auto;
+  }
+
+  .filter-group.right .filter-btn {
+    text-align: right;
+    width: 100%;
+  }
+
+  .filter-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .filter-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.5rem;
+    color: var(--lila);
+    padding: 0;
+    text-align: left;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+
+  .filter-btn.active { color: var(--indigo); }
+
+  .filter-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem 1.5rem;
+  }
+
+  @media (max-width: 1300px) {
+    .projects-grid { grid-template-columns: 1fr; }
+  }
+
+  .project-card a {
+    display: block;
+  }
+
+  .project-card a:hover .project-title,
+  .project-card a:focus-visible .project-title {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  /* PORTADA + previews al hacer hover */
+  .cover-wrap {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.65rem;
+  }
+
+  .cover-placeholder {
+    background: color-mix(in srgb, var(--lila) 22%, transparent);
+    aspect-ratio: 677 / 437;
+  }
+
+  /* las imágenes de preview las crea el JS encima de la portada */
+  .cover-wrap :global(.preview-img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1s ease;
+    pointer-events: none;
+  }
+
+  .cover-wrap :global(.preview-img.on) {
+    opacity: 1;
+  }
+
+  .project-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.1rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .project-year { font-size: 1rem; color: var(--indigo); }
+
+  .project-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .project-title {
+    font-size: 1.6rem;
+    font-weight: 400;
+    text-align: left;
+    line-height: 1.15;
+    color: var(--indigo);
+    width: 100%;
+  }
+
+  /* MOBILE */
+  @media (max-width: 1000px) {
+    /* Los filtros pasan a ser dos filas que se deslizan de lado */
+    .filters {
+      flex-direction: column;
+      gap: 0.55rem;
+      padding-top: 1rem;
+    }
+
+    .filter-group.right,
+    .filter-group.right .filter-btn {
+      text-align: left;
+      width: auto;
+    }
+
+    .filter-group.right { margin-left: 0; }
+
+    .filter-list {
+      flex-direction: row;
+      gap: 1rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      /* la fila llega hasta el borde de la pantalla */
+      margin: 0 calc(var(--gutter) * -1);
+      padding: 0.15rem var(--gutter);
+    }
+
+    .filter-list::-webkit-scrollbar { display: none; }
+
+    .filter-list li { flex-shrink: 0; }
+
+    /* "All" va primero para que siempre quede a la vista */
+    .filter-all { order: -1; }
+
+    .filter-btn {
+      font-size: 1.125rem;
+      line-height: 1.3;
+    }
+
+    .projects-grid { gap: 2.25rem 1.5rem; }
+
+    .project-tags { gap: 0.35rem; }
+
+    .project-tags .tag {
+      font-size: 0.8125rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 7px;
+    }
+
+    .project-title { font-size: 1.5rem; }
+  }
+
+  /* Entrada de las tarjetas al scrollear (solo si hay JS) */
+  :global(html.js) .project-card {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  :global(html.js) .project-card.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* el filtrado debe ganarle al estado revelado: va despues en el codigo */
+  :global(html.js) .project-card.hidden {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .project-card {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn')
+  const cards = document.querySelectorAll<HTMLElement>('.project-card')
+
+  // ── Filtros ───────────────────────────────────────────────
+  let activeRole = 'all'
+  let activeSector = 'all'
+
+  function applyFilters() {
+    cards.forEach((card) => {
+      const roles = card.dataset.role?.split(',') ?? []
+      const sectors = card.dataset.sector?.split(',') ?? []
+      const roleMatch = activeRole === 'all' || roles.includes(activeRole)
+      const sectorMatch = activeSector === 'all' || sectors.includes(activeSector)
+      const show = roleMatch && sectorMatch
+      const wasHidden = card.classList.contains('hidden')
+
+      card.classList.toggle('hidden', !show)
+
+      // las tarjetas que vuelven a aparecer entran con la misma animación
+      if (show && wasHidden) {
+        card.classList.remove('in-view')
+        requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('in-view')))
+      }
+    })
+  }
+
+  function updateActiveButtons() {
+    buttons.forEach((b) => {
+      const active = b.dataset.value === (b.dataset.filter === 'role' ? activeRole : activeSector)
+      b.classList.toggle('active', active)
+      b.setAttribute('aria-pressed', String(active))
+    })
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const value = btn.dataset.value ?? 'all'
+
+      if (btn.dataset.filter === 'role') {
+        activeRole = value
+        activeSector = 'all' // resetea Sector
+      } else {
+        activeSector = value
+        activeRole = 'all' // resetea Role
+      }
+
+      updateActiveButtons()
+      applyFilters()
+    })
+  })
+
+  // ── Entrada al scrollear ──────────────────────────────────
+  if ('IntersectionObserver' in window) {
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view')
+            revealObserver.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -8% 0px' }
+    )
+    cards.forEach((card) => revealObserver.observe(card))
+  } else {
+    cards.forEach((card) => card.classList.add('in-view'))
+  }
+
+  // ── Previews al hacer hover ───────────────────────────────
+  // Sobre la portada se van mostrando otras imágenes del proyecto.
+  // Solo en dispositivos con puntero (en touch no existe el hover),
+  // y las imágenes recién se descargan la primera vez que se pasa el mouse.
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  // tiempo que se queda cada imagen (incluye el fundido de 1s)
+  const STEP_MS = 2400
+
+  if (canHover) {
+    document.querySelectorAll<HTMLElement>('.cover-wrap[data-previews]').forEach((wrap) => {
+      const urls: string[] = JSON.parse(wrap.dataset.previews ?? '[]')
+      const link = wrap.closest('a')
+      if (urls.length === 0 || !link) return
+
+      let imgs: HTMLImageElement[] = []
+      let index = 0 // 0 = portada, 1..n = previews
+      let timer: number | undefined
+
+      function load() {
+        if (imgs.length > 0) return
+        imgs = urls.map((url) => {
+          const img = new Image()
+          img.className = 'preview-img'
+          img.alt = ''
+          img.decoding = 'async'
+          img.src = url
+          wrap.appendChild(img)
+          return img
+        })
+      }
+
+      function show(next: number) {
+        index = next
+        imgs.forEach((img, i) => img.classList.toggle('on', i === index - 1))
+      }
+
+      function advance() {
+        // busca la siguiente imagen que ya esté cargada (la portada siempre lo está)
+        for (let step = 1; step <= urls.length + 1; step++) {
+          const next = (index + step) % (urls.length + 1)
+          const img = imgs[next - 1]
+          if (next === 0 || (img?.complete && img.naturalWidth > 0)) {
+            show(next)
+            return
+          }
+        }
+      }
+
+      function start() {
+        if (timer) return
+        load()
+        timer = window.setInterval(advance, STEP_MS)
+        // el primer cambio llega antes, para que el hover se sienta inmediato
+        window.setTimeout(() => timer && index === 0 && advance(), 400)
+      }
+
+      function stop() {
+        window.clearInterval(timer)
+        timer = undefined
+        show(0)
+      }
+
+      link.addEventListener('pointerenter', start)
+      link.addEventListener('pointerleave', stop)
+      link.addEventListener('focus', start)
+      link.addEventListener('blur', stop)
+    })
+  }
+</script>

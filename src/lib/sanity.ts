@@ -80,6 +80,20 @@ export async function getProject(slug: string) {
   `, { slug })
 }
 
+// ── Work / Workshops ───────────────────────────────────────
+// Un proyecto va a la página Workshops si tiene el rol "workshops".
+// Va a Work si tiene cualquier otro rol (o ninguno); con ambos, aparece en las dos.
+export const WORKSHOP_ROLE = 'workshops'
+
+export function isWorkshop(project: any) {
+  return (project?.role ?? []).includes(WORKSHOP_ROLE)
+}
+
+export function isWork(project: any) {
+  const roles: string[] = project?.role ?? []
+  return roles.length === 0 || roles.some((r) => r !== WORKSHOP_ROLE)
+}
+
 // ── Art ────────────────────────────────────────────────────
 export async function getArtWorks() {
   return client.fetch(`

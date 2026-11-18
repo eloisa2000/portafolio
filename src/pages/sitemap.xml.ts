@@ -7,6 +7,7 @@ export const GET: APIRoute = async ({ site }) => {
   const projects = await getProjects()
   const paths = [
     '/',
+    '/workshops/',
     '/about/',
     ...projects
       .map((p: any) => p.slug_en?.current ?? p.slug_es?.current)
