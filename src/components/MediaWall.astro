@@ -20,6 +20,8 @@ export interface WallItem {
   /** enlace externo (sitio, video completo, fanzine...) */
   link?: string
   linkLabel?: string
+  /** se alinea en una fila, lado a lado, con las piezas vecinas que también lo tengan */
+  sideBySide?: boolean
 }
 
 /** Una obra presentada como bloque: título, texto y sus piezas en una fila horizontal */
@@ -55,6 +57,18 @@ const SIZES = '(max-width: 1000px) 50vw, (max-width: 1500px) calc((100vw - 540px
 const ROW_SIZES = '(max-width: 1000px) 70vw, 560px'
 
 const inGroup = (groups: string[]) => initialGroup === 'all' || groups.includes(initialGroup)
+
+// El muro se arma por tramos: piezas sueltas en columnas y, entre medio, filas de
+// piezas "lado a lado" (las seguidas del mismo grupo que tienen sideBySide).
+const segments: any[] = []
+for (const item of items) {
+  const last = segments[segments.length - 1]
+  if (!item.sideBySide) segments.push(item)
+  else if (last && 'side' in last && last.side[0].groups.join() === item.groups.join()) last.side.push(item)
+  else segments.push({ side: [item] })
+}
+// En las filas lado a lado cada pieza ocupa una fracción del ancho del contenido
+const sideSizes = (n: number) => ["(max-width: 1000px) ", Math.round(100 * (1 / n)), "vw, calc((100vw - 524px) * ", (1 / n).toFixed(4), ")"].join("")
 // Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
 let shown = 0
 ---
@@ -95,9 +109,19 @@ let shown = 0
 
   <!-- Muro en columnas -->
   <section class="media-wall" aria-label={label}>
-    {items.map((item) => {
-      const visible = inGroup(item.groups)
-      return <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={SIZES} />
+    {segments.map((segment) => {
+      if ('side' in segment) {
+        const visible = inGroup(segment.side[0].groups)
+        return (
+          <div class="wall-side" style={`--n:${segment.side.length}`}>
+            {segment.side.map((item) => (
+              <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={sideSizes(segment.side.length)} />
+            ))}
+          </div>
+        )
+      }
+      const visible = inGroup(segment.groups)
+      return <WallPiece item={segment} visible={visible} eager={visible && shown++ < 3} sizes={SIZES} />
     })}
   </section>
 
@@ -132,6 +156,15 @@ let shown = 0
 
   @media (max-width: 1500px) {
     .media-wall { columns: 2; }
+  }
+
+  /* FILA LADO A LADO — cruza todas las columnas y reparte sus piezas en partes iguales */
+  .wall-side {
+    column-span: all;
+    display: grid;
+    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: start;
   }
 
   /* OBRAS POR BLOQUE — título, texto y una fila de piezas de alto fijo */
@@ -262,7 +295,7 @@ let shown = 0
     margin: 0;
     padding: 1.25rem 2rem 1.5rem 1.75rem;
     border: none;
-    background: var(--bg);
+    background: transparent;
     color: var(--indigo);
     font-family: var(--font);
     overflow: hidden;
@@ -274,7 +307,38 @@ let shown = 0
     gap: 1.25rem;
   }
 
-  .wall-viewer::backdrop { background: var(--bg); }
+  .wall-viewer::backdrop { background: transparent; }
+
+  /* El fondo es una capa aparte para poder fundirlo de 0 a 100 al abrir */
+  .wall-viewer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    opacity: 0;
+    transition: opacity 0.42s ease;
+  }
+
+  .wall-viewer.is-open::before { opacity: 1; }
+
+  .wall-viewer .viewer-bar,
+  .wall-viewer .viewer-foot {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .wall-viewer.is-open .viewer-bar,
+  .wall-viewer.is-open .viewer-foot {
+    opacity: 1;
+    transition-delay: 0.14s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wall-viewer::before,
+    .wall-viewer .viewer-bar,
+    .wall-viewer .viewer-foot { transition: none; }
+  }
 
   .viewer-bar,
   .viewer-foot {
@@ -372,6 +436,7 @@ let shown = 0
 
   @media (max-width: 1000px) {
     .media-wall { column-gap: 1rem; }
+    .wall-side { column-gap: 1rem; }
     .wall-group { margin-bottom: 3rem; }
     .group-strip {
       height: clamp(220px, 38vh, 340px);
@@ -512,23 +577,7 @@ let shown = 0
     current = (index + list.length) % list.length
     const opener = list[current]
 
-    stage.replaceChildren()
-    if (opener.dataset.kind === 'video') {
-      const video = document.createElement('video')
-      video.src = opener.dataset.full ?? ''
-      if (opener.dataset.poster) video.poster = opener.dataset.poster
-      video.controls = true
-      video.playsInline = true
-      video.loop = true
-      video.autoplay = true
-      stage.append(video)
-    } else {
-      const img = document.createElement('img')
-      img.src = opener.dataset.full ?? ''
-      img.alt = opener.dataset.caption ?? ''
-      stage.append(img)
-    }
-
+    // Primero los textos: su alto define cuánto espacio le queda a la pieza
     if (captionEl) captionEl.textContent = opener.dataset.caption ?? ''
     if (descriptionEl) {
       descriptionEl.textContent = opener.dataset.description ?? ''
@@ -542,25 +591,124 @@ let shown = 0
       else linkEl.removeAttribute('href')
     }
     if (countEl) countEl.textContent = `${current + 1} / ${list.length}`
+
+    // Tamaño final de la pieza: lo más grande que cabe en el escenario con su proporción
+    stage.replaceChildren()
+    const thumb = opener.getBoundingClientRect()
+    const box = stage.getBoundingClientRect()
+    const ratio = thumb.height > 0 ? thumb.width / thumb.height : 1
+    const width = Math.min(box.width, box.height * ratio)
+    const fit = (el: HTMLElement) => {
+      el.style.width = `${Math.round(width)}px`
+      el.style.height = `${Math.round(width / ratio)}px`
+    }
+
+    if (opener.dataset.kind === 'video') {
+      const video = document.createElement('video')
+      video.src = opener.dataset.full ?? ''
+      if (opener.dataset.poster) video.poster = opener.dataset.poster
+      video.controls = true
+      video.playsInline = true
+      video.loop = true
+      video.autoplay = true
+      fit(video)
+      stage.append(video)
+    } else {
+      const img = document.createElement('img')
+      img.alt = opener.dataset.caption ?? ''
+      const full = opener.dataset.full ?? ''
+      const small = opener.querySelector('img')
+      if (small?.currentSrc && small.naturalWidth > 0) {
+        // se ve de inmediato con la miniatura y se cambia por la grande cuando termina de cargar
+        img.src = small.currentSrc
+        const big = new Image()
+        big.onload = () => {
+          if (img.isConnected) img.src = full
+        }
+        big.src = full
+      } else {
+        img.src = full
+      }
+      fit(img)
+      stage.append(img)
+    }
   }
 
-  openers.forEach((opener) =>
-    opener.addEventListener('click', () => {
-      if (!viewer) return
-      wallVideos.forEach((v) => v.pause())
-      viewer.showModal()
-      show(visible().indexOf(opener))
-    })
-  )
+  // ── Apertura y cierre animados: la pieza viaja entre su lugar en el muro y el centro ──
+  const EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)'
+  let closing: number | undefined
+
+  // transform que lleva la pieza del visor a calzar sobre su miniatura
+  function toThumb(media: HTMLElement, opener: HTMLElement) {
+    const from = opener.getBoundingClientRect()
+    const to = media.getBoundingClientRect()
+    if (to.width === 0 || to.height === 0) return 'none'
+    return `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`
+  }
+
+  function openViewer(opener: HTMLButtonElement) {
+    if (!viewer) return
+    window.clearTimeout(closing)
+    wallVideos.forEach((v) => v.pause())
+    viewer.showModal()
+    show(visible().indexOf(opener))
+    const media = stage?.firstElementChild as HTMLElement | null
+    if (media && !reduceMotion) {
+      media.animate(
+        [
+          { transformOrigin: 'top left', transform: toThumb(media, opener) },
+          { transformOrigin: 'top left', transform: 'none' },
+        ],
+        { duration: 420, easing: EASE }
+      )
+    }
+    // fuerza un reflow para que el fundido del fondo parta desde 0
+    void viewer.offsetWidth
+    viewer.classList.add('is-open')
+  }
+
+  function closeViewer() {
+    if (!viewer?.open) return
+    const opener = visible()[current]
+    const media = stage?.firstElementChild as HTMLElement | null
+    viewer.classList.remove('is-open')
+    if (reduceMotion || !media || !opener) {
+      viewer.close()
+      return
+    }
+    if (media instanceof HTMLVideoElement) media.pause()
+    media.animate(
+      [
+        { transformOrigin: 'top left', transform: 'none' },
+        { transformOrigin: 'top left', transform: toThumb(media, opener) },
+      ],
+      { duration: 260, easing: EASE, fill: 'forwards' }
+    )
+    window.clearTimeout(closing)
+    closing = window.setTimeout(() => viewer.close(), 260)
+  }
+
+  openers.forEach((opener) => opener.addEventListener('click', () => openViewer(opener)))
+
+  // Esc cierra con la misma animación
+  viewer?.addEventListener('cancel', (event) => {
+    event.preventDefault()
+    closeViewer()
+  })
+
+  // al cambiar el tamaño de la ventana la pieza se vuelve a ajustar
+  window.addEventListener('resize', () => {
+    if (viewer?.open) show(current)
+  })
 
   viewer?.addEventListener('click', (event) => {
     const target = event.target as HTMLElement
     const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
-    if (action === 'close') viewer.close()
+    if (action === 'close') closeViewer()
     else if (action === 'prev') show(current - 1)
     else if (action === 'next') show(current + 1)
     // click en el espacio vacío alrededor de la pieza: cierra
-    else if (target === stage) viewer.close()
+    else if (target === stage) closeViewer()
   })
 
   viewer?.addEventListener('keydown', (event) => {
@@ -569,6 +717,7 @@ let shown = 0
   })
 
   viewer?.addEventListener('close', () => {
+    viewer.classList.remove('is-open')
     const opener = visible()[current]
     // al cerrar se corta el video (y su sonido) y vuelven a andar los del muro
     stage?.replaceChildren()

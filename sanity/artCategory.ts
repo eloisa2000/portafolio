@@ -31,6 +31,14 @@ const pieceFields = [
     description: 'Ej: Visit site, Watch video, Read zine. Por defecto: Visit.',
     type: 'string',
   }),
+  defineField({
+    name: 'sideBySide',
+    title: 'Lado a lado',
+    description:
+      'Solo en presentación Muro. Las piezas seguidas que lo tengan activado se alinean en una fila, una al lado de la otra (ideal para 2 o 3 piezas del mismo formato).',
+    type: 'boolean',
+    initialValue: false,
+  }),
   defineField({ name: 'hidden', title: 'Ocultar del sitio', type: 'boolean', initialValue: false }),
 ]
 
