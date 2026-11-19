@@ -167,6 +167,21 @@ let shown = 0
     align-items: start;
   }
 
+  /* Con JS el muro se arma en orden de lectura: las primeras piezas quedan en la fila
+     de arriba, de izquierda a derecha (ver layoutWall). Sin JS se queda en columnas CSS. */
+  .media-wall.is-laid-out { columns: auto; }
+
+  .media-wall :global(.wall-cols) {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .media-wall :global(.wall-col) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   /* OBRAS POR BLOQUE — título, texto y una fila de piezas de alto fijo */
   .wall-group {
     margin-bottom: 4rem;
@@ -436,6 +451,7 @@ let shown = 0
 
   @media (max-width: 1000px) {
     .media-wall { column-gap: 1rem; }
+    .media-wall :global(.wall-cols) { gap: 1rem; }
     .wall-side { column-gap: 1rem; }
     .wall-group { margin-bottom: 3rem; }
     .group-strip {
@@ -484,6 +500,66 @@ let shown = 0
     wallVideos.forEach((video) => observer.observe(video))
   }
 
+  // ── Muro en orden de lectura ──
+  // Las columnas CSS se llenan de arriba abajo, así que "lo primero" quedaría en la
+  // primera columna. Aquí cada pieza visible va, en su orden, a la columna más corta:
+  // las primeras quedan arriba, de izquierda a derecha, y las columnas salen parejas.
+  const wallEl = document.querySelector<HTMLElement>('.media-wall')
+  // orden original: piezas sueltas y filas "lado a lado"
+  const sequence = wallEl ? (Array.from(wallEl.children) as HTMLElement[]) : []
+  const twoColumns = window.matchMedia('(max-width: 1500px)')
+  const GAP = 0.06 // separación entre piezas, en anchos de columna (aprox.)
+
+  // alto de una pieza medido en anchos de columna, según su proporción
+  function heightOf(el: HTMLElement) {
+    const ratio = parseFloat(el.querySelector<HTMLElement>('.img-frame')?.style.aspectRatio ?? '') || 1
+    return 1 / ratio + (el.querySelector('figcaption') ? 0.1 : 0) + GAP
+  }
+
+  function layoutWall() {
+    if (!wallEl || sequence.length === 0) return
+    const n = twoColumns.matches ? 2 : 3
+    const out = document.createDocumentFragment()
+    let cols: HTMLElement[] = []
+    let heights: number[] = []
+    let open = false
+    for (const el of sequence) {
+      // una fila "lado a lado" corta el muro: lo que sigue parte en columnas nuevas
+      if (el.classList.contains('wall-side')) {
+        out.append(el)
+        open = false
+        continue
+      }
+      if (!open) {
+        const block = document.createElement('div')
+        block.className = 'wall-cols'
+        cols = Array.from({ length: n }, () => {
+          const col = document.createElement('div')
+          col.className = 'wall-col'
+          return col
+        })
+        heights = new Array(n).fill(0)
+        block.append(...cols)
+        out.append(block)
+        open = true
+      }
+      // las piezas ocultas por el filtro no ocupan lugar
+      if (el.hidden) {
+        cols[0].append(el)
+        continue
+      }
+      let k = 0
+      for (let i = 1; i < n; i++) if (heights[i] < heights[k] - 0.001) k = i
+      cols[k].append(el)
+      heights[k] += heightOf(el)
+    }
+    wallEl.replaceChildren(out)
+    wallEl.classList.add('is-laid-out')
+  }
+
+  layoutWall()
+  twoColumns.addEventListener('change', layoutWall)
+
   // ── Filtros: muestran un grupo de piezas a la vez ──
   const filters = Array.from(document.querySelectorAll<HTMLButtonElement>('.wall-filter'))
   const useHash = wall?.hasAttribute('data-use-hash') ?? false
@@ -497,6 +573,7 @@ let shown = 0
     ;[...figures, ...groupSections].forEach((f) => {
       f.hidden = group !== 'all' && !(f.dataset.groups ?? '').split(' ').includes(group)
     })
+    layoutWall()
     updateStrips()
     if (useHash && updateHash) history.replaceState(null, '', `#${group}`)
   }
