@@ -6,7 +6,10 @@ import type { SanityImageSource } from '@sanity/image-url/lib/types/types'
 export const client = createClient({
   projectId: 'wzn09rti',
   dataset: 'production',
-  useCdn: true,
+  // El sitio es estático: los datos se leen una sola vez, al construir. Sin CDN se
+  // lee directo de la API, así un build disparado justo después de publicar en el
+  // Studio no toma una respuesta vieja que la CDN todavía tenga en caché.
+  useCdn: false,
   apiVersion: '2024-01-01',
 })
 
