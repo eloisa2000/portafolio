@@ -3,7 +3,7 @@
 // Cada categoría es un documento "artCategory" en Sanity con su lista de piezas;
 // las categorías nuevas aparecen solas en la lista de la izquierda.
 import Layout from '../layouts/Layout.astro'
-import MediaWall, { type WallItem } from '../components/MediaWall.astro'
+import MediaWall, { type WallItem, type WallRow } from '../components/MediaWall.astro'
 import WallFilters from '../components/WallFilters.astro'
 import { getArtCategories, urlFor } from '../lib/sanity'
 
@@ -11,37 +11,67 @@ const categories = (await getArtCategories())
   .map((cat: any) => ({
     slug: cat.slug as string,
     title: (cat.title_en ?? cat.title_es) as string,
+    // "rows": cada obra en un bloque con su fila de piezas. Si no, muro en columnas.
+    byWork: cat.layout === 'rows',
     // descarta lo que quedó sin archivo subido en Sanity
     items: (cat.items ?? []).filter((item: any) => (item._type === 'artVideo' ? item.videoUrl : item.asset)),
   }))
   // una categoría sin piezas no se muestra
   .filter((cat: any) => cat.slug && cat.items.length > 0)
 
-const items: WallItem[] = categories.flatMap((cat: any) => {
+// Piezas del muro y obras por bloque, según la presentación de cada categoría
+const items: WallItem[] = []
+const rows: WallRow[] = []
+
+for (const cat of categories) {
   // Una obra puede tener varias piezas seguidas con el mismo título: la descripción
-  // y el enlace se escriben solo en la primera, y las demás los heredan en el visor.
+  // y el enlace se escriben solo en la primera, y las demás los heredan.
   let lead: any
-  return cat.items.map((item: any) => {
-    if (!item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link) lead = item
-    const common = {
+  let row: WallRow | undefined
+  for (const item of cat.items) {
+    const startsWork = !item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link
+    if (startsWork) lead = item
+    const description = lead.description_en ?? lead.description_es
+    const piece = {
+      kind: item._type === 'artVideo' ? 'video' : 'image',
       groups: [cat.slug],
+      image: item._type === 'artVideo' ? undefined : item,
+      videoUrl: item.videoUrl,
+      poster: item.poster,
       title: item.title,
       details: item.details,
       year: item.year,
-      description: lead.description_en ?? lead.description_es,
+      description,
       link: lead.link,
       linkLabel: lead.linkLabel,
+    } as WallItem
+
+    if (!cat.byWork) {
+      items.push(piece)
+      continue
     }
-    return item._type === 'artVideo'
-      ? ({ kind: 'video', videoUrl: item.videoUrl, poster: item.poster, ...common } as WallItem)
-      : ({ kind: 'image', image: item, ...common } as WallItem)
-  })
-})
+    if (startsWork || !row) {
+      row = {
+        groups: [cat.slug],
+        title: lead.title,
+        meta: [lead.details, lead.year].filter(Boolean).join(', '),
+        description,
+        link: lead.link,
+        linkLabel: lead.linkLabel,
+        items: [],
+      }
+      rows.push(row)
+    }
+    row.items.push(piece)
+  }
+}
+
+const allPieces = [...rows.flatMap((row) => row.items), ...items]
 
 // Al entrar se ve la primera categoría
 const first = categories[0]?.slug
 
-const firstImage = items.find((item) => item.kind === 'image')?.image
+const firstImage = allPieces.find((item) => item.kind === 'image')?.image
 const shareImage = firstImage
   ? urlFor(firstImage).width(1200).height(630).fit('crop').auto('format').url()
   : undefined
@@ -66,9 +96,9 @@ const description = names.length > 0
 
   <h1 class="visually-hidden">Art</h1>
 
-  {items.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+  {allPieces.length === 0 && <p class="empty-note">Nothing here yet.</p>}
 
-  <MediaWall items={items} label="Art" initialGroup={categories.length > 1 ? first : 'all'} useHash />
+  <MediaWall items={items} rows={rows} label="Art" initialGroup={categories.length > 1 ? first : 'all'} useHash />
 </Layout>
 
 <style>

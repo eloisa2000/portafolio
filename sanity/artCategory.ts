@@ -62,6 +62,21 @@ export default defineType({
       type: 'number',
     }),
     defineField({
+      name: 'layout',
+      title: 'Presentación',
+      description:
+        'Muro: todas las piezas en columnas. Por obra: cada obra en un bloque con su título, su texto y sus piezas en una fila (se agrupan las piezas seguidas que comparten título).',
+      type: 'string',
+      options: {
+        list: [
+          { title: 'Muro', value: 'wall' },
+          { title: 'Por obra', value: 'rows' },
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'wall',
+    }),
+    defineField({
       name: 'published',
       title: 'Publicada (on/off)',
       description: 'Off = la categoría no aparece en el sitio. Una categoría sin piezas tampoco aparece.',

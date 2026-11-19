@@ -1,8 +1,7 @@
 ---
 // Muro de imágenes y videos en columnas de alto libre, con visor en grande.
 // Lo usan Misc y Art. Los filtros (WallFilters.astro) muestran un grupo a la vez.
-import Img from './Img.astro'
-import { urlFor } from '../lib/sanity'
+import WallPiece from './WallPiece.astro'
 
 export interface WallItem {
   kind: 'image' | 'video'
@@ -23,8 +22,23 @@ export interface WallItem {
   linkLabel?: string
 }
 
-interface Props {
+/** Una obra presentada como bloque: título, texto y sus piezas en una fila horizontal */
+export interface WallRow {
+  groups: string[]
+  title?: string
+  /** línea bajo el título: técnica, año... */
+  meta?: string
+  description?: string
+  link?: string
+  linkLabel?: string
   items: WallItem[]
+}
+
+interface Props {
+  /** piezas del muro en columnas */
+  items: WallItem[]
+  /** obras presentadas por bloque, cada una con su fila de piezas */
+  rows?: WallRow[]
   /** nombre del muro para lectores de pantalla */
   label: string
   /** grupo visible al cargar; "all" muestra todo */
@@ -33,80 +47,61 @@ interface Props {
   useHash?: boolean
 }
 
-const { items, label, initialGroup = 'all', useHash = false } = Astro.props
+const { items, rows = [], label, initialGroup = 'all', useHash = false } = Astro.props
 
-// Ancho de cada columna según el layout (ver CSS más abajo)
+// Ancho de cada columna del muro según el layout (ver CSS más abajo)
 const SIZES = '(max-width: 1000px) 50vw, (max-width: 1500px) calc((100vw - 540px) / 2), calc((100vw - 572px) / 3)'
+// En las filas las piezas tienen alto fijo; su ancho ronda este valor
+const ROW_SIZES = '(max-width: 1000px) 70vw, 560px'
 
-const fullUrl = (image: any) => urlFor(image).width(2400).auto('format').quality(85).url()
-const posterUrl = (image: any) => urlFor(image).width(960).auto('format').quality(75).url()
-
-const inGroup = (item: WallItem) => initialGroup === 'all' || item.groups.includes(initialGroup)
+const inGroup = (groups: string[]) => initialGroup === 'all' || groups.includes(initialGroup)
 // Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
 let shown = 0
 ---
 
-<section class="media-wall" aria-label={label} data-use-hash={useHash ? '' : undefined}>
-  {items.map((item) => {
-    const video = item.kind === 'video'
-    const visible = inGroup(item)
-    const eager = visible && shown++ < 3
-    const name = item.title || (video ? 'Video' : 'Image')
-    const meta = [item.details, item.year].filter(Boolean).join(', ')
-    const ratio = video ? item.poster?.dims?.aspectRatio : undefined
+<div class="wall-root" data-use-hash={useHash ? '' : undefined}>
+
+  <!-- Obras por bloque: título + fila horizontal de piezas -->
+  {rows.map((row) => {
+    const visible = inGroup(row.groups)
     return (
-      <figure class="wall-item" data-groups={item.groups.join(' ')} hidden={!visible}>
-        <button
-          class="wall-open"
-          type="button"
-          aria-label={`Open ${name}`}
-          data-kind={item.kind}
-          data-full={video ? item.videoUrl : fullUrl(item.image)}
-          data-poster={video && item.poster?.asset ? posterUrl(item.poster) : undefined}
-          data-caption={[item.title, meta].filter(Boolean).join(' — ') || undefined}
-          data-description={item.description || undefined}
-          data-link={item.link || undefined}
-          data-link-label={item.link ? item.linkLabel || 'Visit' : undefined}
-        >
-          {video ? (
-            <span
-              class="img-frame wall-video-frame"
-              style={[
-                ratio ? `aspect-ratio:${ratio}` : '',
-                item.poster?.lqip ? `background-image:url(${item.poster.lqip})` : '',
-              ].filter(Boolean).join(';')}
-            >
-              <video
-                muted
-                loop
-                playsinline
-                preload="none"
-                poster={item.poster?.asset ? posterUrl(item.poster) : undefined}
-                data-src={item.videoUrl}
-                aria-hidden="true"
-                tabindex="-1"
-              ></video>
-            </span>
-          ) : (
-            <Img
-              image={item.image}
-              alt={item.title ?? ''}
-              widths={[320, 480, 720, 960, 1400]}
-              sizes={SIZES}
-              eager={eager}
-            />
-          )}
-        </button>
-        {(item.title || meta) && (
-          <figcaption>
-            {item.title && <span class="wall-title">{item.title}</span>}
-            {meta && <span class="wall-meta">{meta}</span>}
-          </figcaption>
+      <section class="wall-group" data-groups={row.groups.join(' ')} hidden={!visible}>
+        <header class="group-head">
+          <div class="group-heading">
+            {row.title && <h2 class="group-title">{row.title}</h2>}
+            {row.meta && <p class="group-meta">{row.meta}</p>}
+          </div>
+          <div class="group-nav">
+            <button class="group-btn" type="button" data-strip="prev" aria-label="Scroll back">←</button>
+            <button class="group-btn" type="button" data-strip="next" aria-label="Scroll forward">→</button>
+          </div>
+        </header>
+        {(row.description || row.link) && (
+          <div class="group-text">
+            {row.description && <p class="group-description">{row.description}</p>}
+            {row.link && (
+              <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || 'Visit'}</a>
+            )}
+          </div>
         )}
-      </figure>
+        <div class="group-strip" tabindex="0" aria-label={row.title ? `${row.title}: images` : 'Images'}>
+          {row.items.map((item) => (
+            <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={ROW_SIZES} caption={false} />
+          ))}
+        </div>
+      </section>
     )
   })}
-</section>
+
+  <!-- Muro en columnas -->
+  <section class="media-wall" aria-label={label}>
+    {items.map((item) => {
+      const visible = inGroup(item.groups)
+      return <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={SIZES} />
+    })}
+  </section>
+
+</div>
 
 <!-- Visor: la imagen o el video en grande, con sonido y controles -->
 <dialog class="wall-viewer" aria-label="Viewer" data-lenis-prevent>
@@ -139,47 +134,123 @@ let shown = 0
     .media-wall { columns: 2; }
   }
 
-  .wall-item {
-    break-inside: avoid;
-    margin-bottom: 1.5rem;
+  /* OBRAS POR BLOQUE — título, texto y una fila de piezas de alto fijo */
+  .wall-group {
+    margin-bottom: 4rem;
   }
 
-  .wall-item[hidden] { display: none; }
+  .wall-group[hidden] { display: none; }
 
-  .wall-open {
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: none;
-    background: none;
-    cursor: zoom-in;
-    font: inherit;
-    color: inherit;
-  }
-
-  .wall-open:focus-visible {
-    outline: 2px solid var(--indigo);
-    outline-offset: 3px;
-  }
-
-  .wall-video-frame video {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .wall-item figcaption {
+  .group-head {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.6rem;
-    margin-top: 0.45rem;
-    font-size: 0.9375rem;
-    line-height: 1.3;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
   }
 
-  .wall-title { color: var(--indigo); }
-  .wall-meta { color: var(--lila); }
+  .group-title {
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--indigo);
+  }
+
+  .group-meta {
+    margin-top: 0.2rem;
+    font-size: 1.0625rem;
+    color: var(--lila);
+  }
+
+  .group-nav {
+    display: flex;
+    gap: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  /* sin nada que deslizar, las flechas no se muestran */
+  .group-nav[hidden] { display: none; }
+
+  .group-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.25rem;
+    color: var(--indigo);
+    padding: 0;
+    line-height: 1.1;
+  }
+
+  .group-btn:disabled {
+    color: var(--lila);
+    cursor: default;
+  }
+
+  .group-btn:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  .group-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  .group-description {
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    color: var(--indigo);
+  }
+
+  .group-link {
+    width: fit-content;
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .group-link:hover { border-bottom-color: transparent; }
+
+  .group-link::after { content: ' ↗'; }
+
+  .group-strip {
+    display: flex;
+    gap: 1rem;
+    height: clamp(260px, 46vh, 460px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .group-strip::-webkit-scrollbar { display: none; }
+
+  .group-strip:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  /* cada pieza toma el alto de la fila y el ancho que le da su proporción */
+  .group-strip :global(.wall-item) {
+    flex: 0 0 auto;
+    height: 100%;
+    margin-bottom: 0;
+    scroll-snap-align: start;
+  }
+
+  .group-strip :global(.wall-open) {
+    width: auto;
+    height: 100%;
+  }
+
+  .group-strip :global(.img-frame) {
+    width: auto;
+    height: 100%;
+  }
 
   /* VISOR */
   .wall-viewer {
@@ -301,7 +372,15 @@ let shown = 0
 
   @media (max-width: 1000px) {
     .media-wall { column-gap: 1rem; }
-    .wall-item { margin-bottom: 1rem; }
+    .wall-group { margin-bottom: 3rem; }
+    .group-strip {
+      height: clamp(220px, 38vh, 340px);
+      /* la fila llega hasta el borde de la pantalla */
+      margin: 0 calc(var(--gutter) * -1);
+      padding: 0 var(--gutter);
+      scroll-padding: 0 var(--gutter);
+    }
+    .group-title { font-size: 1.4rem; }
     .wall-viewer { padding: 1.1rem var(--gutter) 1.25rem; }
   }
 </style>
@@ -309,7 +388,8 @@ let shown = 0
 <script>
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  const wall = document.querySelector<HTMLElement>('.media-wall')
+  const wall = document.querySelector<HTMLElement>('.wall-root')
+  const groupSections = Array.from(document.querySelectorAll<HTMLElement>('.wall-group'))
   const viewer = document.querySelector<HTMLDialogElement>('.wall-viewer')
   const figures = Array.from(document.querySelectorAll<HTMLElement>('.wall-item'))
   const openers = figures.map((f) => f.querySelector<HTMLButtonElement>('.wall-open')!)
@@ -349,9 +429,10 @@ let shown = 0
       b.classList.toggle('active', on)
       b.setAttribute('aria-pressed', String(on))
     })
-    figures.forEach((f) => {
+    ;[...figures, ...groupSections].forEach((f) => {
       f.hidden = group !== 'all' && !(f.dataset.groups ?? '').split(' ').includes(group)
     })
+    updateStrips()
     if (useHash && updateHash) history.replaceState(null, '', `#${group}`)
   }
 
@@ -362,6 +443,46 @@ let shown = 0
       window.scrollTo({ top: 0 })
     })
   })
+
+  // ── Filas de cada obra: las flechas deslizan la fila de lado ──
+  function updateStrip(section: HTMLElement) {
+    const strip = section.querySelector<HTMLElement>('.group-strip')
+    const nav = section.querySelector<HTMLElement>('.group-nav')
+    if (!strip || !nav) return
+    const max = strip.scrollWidth - strip.clientWidth
+    nav.hidden = max <= 4
+    const prev = nav.querySelector<HTMLButtonElement>('[data-strip="prev"]')
+    const next = nav.querySelector<HTMLButtonElement>('[data-strip="next"]')
+    if (prev) prev.disabled = strip.scrollLeft <= 2
+    if (next) next.disabled = strip.scrollLeft >= max - 2
+  }
+  function updateStrips() {
+    groupSections.forEach((section) => {
+      if (!section.hidden) updateStrip(section)
+    })
+  }
+
+  groupSections.forEach((section) => {
+    const strip = section.querySelector<HTMLElement>('.group-strip')
+    if (!strip) return
+    section.querySelectorAll<HTMLButtonElement>('[data-strip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.strip === 'prev' ? -1 : 1
+        const from = strip.scrollLeft
+        const target = from + dir * strip.clientWidth * 0.8
+        strip.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' })
+        // si el navegador no anima el desplazamiento, se salta directo
+        window.setTimeout(() => {
+          if (strip.scrollLeft === from) strip.scrollTo({ left: target, behavior: 'auto' })
+        }, 350)
+      })
+    })
+    strip.addEventListener('scroll', () => updateStrip(section), { passive: true })
+    // el ancho de la fila cambia a medida que cargan las imágenes
+    strip.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => updateStrip(section), { once: true }))
+  })
+  window.addEventListener('resize', updateStrips)
+  updateStrips()
 
   // Enlace directo a un grupo: /art#photography
   function fromHash() {

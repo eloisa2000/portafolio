@@ -117,7 +117,7 @@ export async function getMisc() {
 // Cada categoría ("artCategory") trae su lista de piezas, en el orden en que se ven.
 export async function getArtCategories() {
   return client.fetch(`*[_type == "artCategory" && published != false] | order(order asc, title_en asc) {
-    _id, title_en, title_es,
+    _id, title_en, title_es, layout,
     "slug": slug.current,
     items[hidden != true]{
       _key, _type, title, details, year,
