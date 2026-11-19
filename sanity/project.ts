@@ -251,6 +251,13 @@ export default defineType({
 
     // ── ENGLISH ────────────────────────────────────────────
     defineField({
+      name: 'headline_en',
+      title: 'Frase del encabezado',
+      type: 'string',
+      group: 'en',
+      description: 'Opcional. Una línea que resume el proyecto; aparece junto a la foto al entrar a su página. Pon *asteriscos* alrededor de las palabras que van en la tipografía alterna. Si queda vacío, se usa la frase de la sección.',
+    }),
+    defineField({
       name: 'title_en',
       title: 'Project name',
       type: 'string',

@@ -83,7 +83,7 @@ export async function getEntry(type: Collection, slug: string) {
   return client.fetch(
     `*[_type == $type && (slug_en.current == $slug || slug_es.current == $slug)]
       | order(select(slug_en.current == $slug => 0, 1) asc)[0]{
-      _id, _type, title_en, title_es, slug_en, slug_es,
+      _id, _type, title_en, title_es, slug_en, slug_es, headline_en,
       year, agency, role, sector, tags,
       contextAndChallenge_en, solution_en, results_en,
       contextAndChallenge_es, solution_es, results_es,

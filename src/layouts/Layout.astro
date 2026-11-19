@@ -17,6 +17,8 @@ interface Props {
   section?: 'work' | 'workshops' | 'art' | 'misc' | 'about'
   /** En la home el encabezado del sidebar es el <h1> de la página */
   headlineAsH1?: boolean
+  /** Frase propia de la página (un proyecto o workshop); reemplaza la de la sección */
+  headline?: string
 }
 
 const name = profile?.name ?? 'Eloísa Nieto'
@@ -36,6 +38,7 @@ const {
   jsonLd,
   headlineAsH1 = false,
   section,
+  headline,
 } = Astro.props
 const currentPath = Astro.url.pathname
 const activeSection =
@@ -65,7 +68,7 @@ const sectionHeadlines: Record<string, string | undefined> = {
   misc: profile?.headline_misc_en,
   about: profile?.headline_about_en,
 }
-const HEADLINE = sectionHeadlines[activeSection]?.trim() || DEFAULT_HEADLINE
+const HEADLINE = headline?.trim() || sectionHeadlines[activeSection]?.trim() || DEFAULT_HEADLINE
 const headlineHtml = highlight(HEADLINE, HEADLINE_ACCENTS)
 const HeadlineTag = headlineAsH1 ? 'h1' : 'p'
 
