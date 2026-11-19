@@ -22,7 +22,7 @@ interface Props {
 const name = profile?.name ?? 'Eloísa Nieto'
 
 // Encabezado del sitio: se edita en Sanity (Perfil → bio_en).
-const HEADLINE = profile?.bio_en?.trim() || 'seeking beauty and functionality in the digital world'
+const DEFAULT_HEADLINE = profile?.bio_en?.trim() || 'seeking beauty and functionality in the digital world'
 // Palabras del encabezado que van en la tipografía alterna (si aparecen en el texto)
 const HEADLINE_ACCENTS = ['beauty', 'functionality', 'looks', 'works']
 
@@ -48,10 +48,24 @@ function escapeHtml(text: string) {
 
 function highlight(text: string, words: string[]) {
   if (!text) return ''
+  // Si la frase trae *asteriscos*, esas palabras van en la tipografía alterna
+  if (text.includes('*')) {
+    return escapeHtml(text).replace(/\*([^*]+)\*/g, '<span class="serif">$1</span>').replace(/\*/g, '')
+  }
+  // Si no, se usan las palabras de la lista de respaldo
   const pattern = new RegExp(`\\b(${words.join('|')})\\b`, 'gi')
   return escapeHtml(text).replace(pattern, '<span class="serif">$&</span>')
 }
 
+// Cada sección tiene su propia frase (Sanity: Perfil → Frases del encabezado).
+// Work usa la bio corta; las demás caen en ella si su campo está vacío.
+const sectionHeadlines: Record<string, string | undefined> = {
+  workshops: profile?.headline_workshops_en,
+  art: profile?.headline_art_en,
+  misc: profile?.headline_misc_en,
+  about: profile?.headline_about_en,
+}
+const HEADLINE = sectionHeadlines[activeSection]?.trim() || DEFAULT_HEADLINE
 const headlineHtml = highlight(HEADLINE, HEADLINE_ACCENTS)
 const HeadlineTag = headlineAsH1 ? 'h1' : 'p'
 
