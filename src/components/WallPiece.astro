@@ -4,6 +4,7 @@
 import Img from './Img.astro'
 import { urlFor } from '../lib/sanity'
 import type { WallItem } from './MediaWall.astro'
+import { langOf, ui } from '../lib/i18n'
 
 interface Props {
   item: WallItem
@@ -21,8 +22,9 @@ const { item, visible = true, eager = false, sizes, caption = true } = Astro.pro
 const fullUrl = (image: any) => urlFor(image).width(2400).auto('format').quality(85).url()
 const posterUrl = (image: any) => urlFor(image).width(960).auto('format').quality(75).url()
 
+const T = ui[langOf(Astro.url)]
 const video = item.kind === 'video'
-const name = item.title || (video ? 'Video' : 'Image')
+const name = item.title || (video ? T.video : T.image)
 const meta = [item.details, item.year].filter(Boolean).join(', ')
 const ratio = video ? item.poster?.dims?.aspectRatio : undefined
 ---
@@ -31,14 +33,14 @@ const ratio = video ? item.poster?.dims?.aspectRatio : undefined
   <button
     class="wall-open"
     type="button"
-    aria-label={`Open ${name}`}
+    aria-label={`${T.open} ${name}`}
     data-kind={item.kind}
     data-full={video ? item.videoUrl : fullUrl(item.image)}
     data-poster={video && item.poster?.asset ? posterUrl(item.poster) : undefined}
     data-caption={[item.title, meta].filter(Boolean).join(' — ') || undefined}
     data-description={item.description || undefined}
     data-link={item.link || undefined}
-    data-link-label={item.link ? item.linkLabel || 'Visit' : undefined}
+    data-link-label={item.link ? item.linkLabel || T.visit : undefined}
     data-more-links={item.moreLinks?.length ? JSON.stringify(item.moreLinks) : undefined}
   >
     {video ? (

@@ -249,6 +249,14 @@ export default defineType({
       group: 'es',
     }),
 
+    defineField({
+      name: 'headline_es',
+      title: 'Frase del encabezado',
+      type: 'string',
+      group: 'es',
+      description: 'Opcional. Una línea que resume el proyecto; aparece junto a la foto al entrar a su página. Pon *asteriscos* alrededor de las palabras que van en la tipografía alterna. Si queda vacío, se usa la frase de la sección.',
+    }),
+
     // ── ENGLISH ────────────────────────────────────────────
     defineField({
       name: 'headline_en',

@@ -8,11 +8,23 @@
 import { defineArrayMember, defineField, defineType } from 'sanity'
 
 const pieceFields = [
-  defineField({ name: 'title', title: 'Título', description: 'Opcional.', type: 'string' }),
+  defineField({ name: 'title', title: 'Título', description: 'Opcional. Es el que se ve en la versión en inglés.', type: 'string' }),
+  defineField({
+    name: 'title_es',
+    title: 'Título (ES)',
+    description: 'Opcional. Para la versión en español; si queda vacío se usa el título de arriba.',
+    type: 'string',
+  }),
   defineField({
     name: 'details',
     title: 'Detalles',
     description: 'Opcional. Técnica, formato, lugar... Ej: "Óleo sobre tela, 50 × 40 cm".',
+    type: 'string',
+  }),
+  defineField({
+    name: 'details_es',
+    title: 'Detalles (ES)',
+    description: 'Opcional. Para la versión en español; si queda vacío se usan los detalles de arriba.',
     type: 'string',
   }),
   defineField({ name: 'year', title: 'Año', type: 'number' }),
@@ -32,6 +44,12 @@ const pieceFields = [
     type: 'string',
   }),
   defineField({
+    name: 'linkLabel_es',
+    title: 'Texto del enlace (ES)',
+    description: 'Ej: Visitar sitio, Ver video, Leer fanzine.',
+    type: 'string',
+  }),
+  defineField({
     name: 'moreLinks',
     title: 'Más enlaces',
     description: 'Opcional. Otros enlaces de la misma obra; se muestran junto al enlace principal.',
@@ -42,6 +60,7 @@ const pieceFields = [
         name: 'extraLink',
         fields: [
           defineField({ name: 'label', title: 'Texto del enlace', type: 'string' }),
+          defineField({ name: 'label_es', title: 'Texto del enlace (ES)', type: 'string' }),
           defineField({ name: 'url', title: 'Enlace', type: 'url', validation: (r) => r.required() }),
         ],
         preview: { select: { title: 'label', subtitle: 'url' } },

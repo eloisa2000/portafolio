@@ -4,19 +4,23 @@ import Layout from '../layouts/Layout.astro'
 import Img from '../components/Img.astro'
 import { getProfile } from '../lib/sanity'
 import { excerpt } from '../lib/labels'
+import { langOf, loc, ui } from '../lib/i18n'
+
+const lang = langOf(Astro.url)
+const T = ui[lang]
 
 const profile = await getProfile()
 const name = profile?.name ?? 'Eloísa Nieto'
 
-const aboutTitle = profile?.aboutTitle_en ?? 'About'
+const aboutTitle = loc(profile, 'aboutTitle', lang) ?? T.about
 // El texto viene como un solo bloque; cada línea en blanco separa un párrafo
-const paragraphs = (profile?.aboutText_en ?? '')
+const paragraphs = (loc(profile, 'aboutText', lang) ?? '')
   .split(/\n\s*\n/)
   .map((p: string) => p.replace(/\s+/g, ' ').trim())
   .filter(Boolean)
 
-const likesTitle = profile?.likesTitle_en ?? 'Likes'
-const likes = (profile?.likes_en ?? []).filter((l: string) => l && l.trim().length > 0)
+const likesTitle = loc(profile, 'likesTitle', lang) ?? T.likes
+const likes = (loc(profile, 'likes', lang) ?? []).filter((l: string) => l && l.trim().length > 0)
 
 // Las dos imágenes del final (pueden ser 0, 1 o 2 según lo que cargues en Sanity)
 const aboutImages = (profile?.aboutImages ?? []).filter((img: any) => img?.asset)
@@ -29,7 +33,7 @@ const exhibitions = (profile?.exhibitions ?? [])
 const description = excerpt(paragraphs.join(' ')) || undefined
 ---
 
-<Layout title={`About — ${name}`} description={description} type="profile">
+<Layout title={`${T.about} — ${name}`} description={description} type="profile">
   <div class="about-page">
     <h1 class="about-title">{aboutTitle}</h1>
 
@@ -72,7 +76,7 @@ const description = excerpt(paragraphs.join(' ')) || undefined
 
     {exhibitions.length > 0 && (
       <section class="exhibitions-section">
-        <h2 class="section-label">Exhibitions &amp; Screenings</h2>
+        <h2 class="section-label">{T.exhibitions}</h2>
         <ul class="exhibitions-list">
           {exhibitions.map((e: any) => (
             <li class="exhibition-row">

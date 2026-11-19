@@ -19,6 +19,12 @@ export default defineType({
       type: 'string',
     }),
     defineField({
+      name: 'intro_es',
+      title: 'Texto de la página (ES)',
+      description: 'Opcional. Lo mismo, para la versión en español.',
+      type: 'string',
+    }),
+    defineField({
       name: 'items',
       title: 'Imágenes y videos',
       description: 'Se muestran en este orden. Arrastra para reordenar.',

@@ -4,8 +4,9 @@
 // Work filtra por role y sector; Workshops, por sus tags.
 import Layout from '../layouts/Layout.astro'
 import Img from './Img.astro'
-import { urlFor, slugOf, WORKSHOP_ROLE } from '../lib/sanity'
+import { urlFor, WORKSHOP_ROLE } from '../lib/sanity'
 import { fmtRole } from '../lib/labels'
+import { fmtSector, href, langOf, loc, slugFor, ui } from '../lib/i18n'
 
 interface Props {
   projects: any[]
@@ -21,6 +22,8 @@ interface Props {
 }
 
 const { projects, title, description, section, basePath, label, headlineAsH1 = false } = Astro.props
+const lang = langOf(Astro.url)
+const T = ui[lang]
 
 // Etiquetas de cada tarjeta: los workshops usan tags; los proyectos, role
 const tagsOf = (p: any): string[] => (section === 'workshops' ? p.tags : p.role) ?? []
@@ -56,26 +59,26 @@ const shareImage = projects[0]?.coverImage
   <div slot="sidebar" class="filters">
     {allRoles.length > 0 && (
     <div class="filter-group left">
-      <ul class="filter-list" aria-label="Filter by discipline">
+      <ul class="filter-list" aria-label={T.filterByDiscipline}>
         {allRoles.map((role: any) => (
           <li>
-            <button class="filter-btn" data-filter="role" data-value={role} aria-pressed="false">{fmtRole(role)}</button>
+            <button class="filter-btn" data-filter="role" data-value={role} aria-pressed="false">{fmtRole(role, lang)}</button>
           </li>
         ))}
-        <li class="filter-all"><button class="filter-btn active" data-filter="role" data-value="all" aria-pressed="true">All</button></li>
+        <li class="filter-all"><button class="filter-btn active" data-filter="role" data-value="all" aria-pressed="true">{T.all}</button></li>
       </ul>
     </div>
     )}
 
     {allSectors.length > 0 && (
     <div class="filter-group right">
-      <ul class="filter-list" aria-label="Filter by sector">
+      <ul class="filter-list" aria-label={T.filterBySector}>
         {allSectors.map((sector: any) => (
           <li>
-            <button class="filter-btn" data-filter="sector" data-value={sector} aria-pressed="false">{sector}</button>
+            <button class="filter-btn" data-filter="sector" data-value={sector} aria-pressed="false">{fmtSector(sector, lang)}</button>
           </li>
         ))}
-        <li class="filter-all"><button class="filter-btn active" data-filter="sector" data-value="all" aria-pressed="true">All</button></li>
+        <li class="filter-all"><button class="filter-btn active" data-filter="sector" data-value="all" aria-pressed="true">{T.all}</button></li>
       </ul>
     </div>
     )}
@@ -83,11 +86,11 @@ const shareImage = projects[0]?.coverImage
 
   {!headlineAsH1 && <h1 class="visually-hidden">{label}</h1>}
 
-  {projects.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+  {projects.length === 0 && <p class="empty-note">{T.empty}</p>}
 
   <section class="projects-grid" aria-label={label}>
     {projects.map((project: any, i: number) => {
-      const title = project.title_en ?? project.title_es
+      const title = loc(project, 'title', lang)
       const previews = previewUrls(project)
       return (
         <article
@@ -95,7 +98,7 @@ const shareImage = projects[0]?.coverImage
           data-role={tagsOf(project).join(',')}
           data-sector={project.sector?.join(',')}
         >
-          <a href={`${basePath}/${slugOf(project)}`}>
+          <a href={href(`${basePath}/${slugFor(project, lang)}`, lang)}>
             <div class="cover-wrap" data-previews={previews.length > 0 ? JSON.stringify(previews) : undefined}>
               {project.coverImage ? (
                 <Img
@@ -114,7 +117,7 @@ const shareImage = projects[0]?.coverImage
               <span class="project-year">{project.year}</span>
               <div class="project-tags">
                 {tagsOf(project).map((r: string) => (
-                  <span class="tag">{fmtRole(r)}</span>
+                  <span class="tag">{fmtRole(r, lang)}</span>
                 ))}
               </div>
             </div>

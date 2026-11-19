@@ -12,6 +12,7 @@ export default defineConfig({
   redirects: {
     // El listado de proyectos vive en la home
     '/work': '/',
+    '/es/work': '/es',
     // Acceso rápido al CMS (Sanity Studio)
     '/admin': 'https://portafolio-elo.sanity.studio/',
   },

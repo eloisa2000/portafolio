@@ -1,16 +1,18 @@
 ---
 import ProjectsPage from '../../components/ProjectsPage.astro'
 import { getWorkshops } from '../../lib/sanity'
+import { langOf, ui } from '../../lib/i18n'
 
+const T = ui[langOf(Astro.url)]
 // Colección "workshop" de Sanity
 const workshops = await getWorkshops()
 ---
 
 <ProjectsPage
   projects={workshops}
-  title="Workshops — Eloísa Nieto"
-  description="Workshops by Eloísa Nieto on design, video and cinema."
+  title={`${T.nav.workshops} — Eloísa Nieto`}
+  description={T.workshopsDescription}
   section="workshops"
   basePath="/workshops"
-  label="Workshops"
+  label={T.nav.workshops}
 />

@@ -6,11 +6,17 @@ import Layout from '../layouts/Layout.astro'
 import MediaWall, { type WallItem, type WallRow } from '../components/MediaWall.astro'
 import WallFilters from '../components/WallFilters.astro'
 import { getArtCategories, urlFor } from '../lib/sanity'
+import { langOf, loc, ui } from '../lib/i18n'
+
+const lang = langOf(Astro.url)
+const T = ui[lang]
+// Título, ficha y texto de enlace de una pieza: el campo base es el inglés y "_es" el español
+const tr = (obj: any, field: string) => (lang === 'es' ? obj?.[`${field}_es`] || obj?.[field] : obj?.[field])
 
 const categories = (await getArtCategories())
   .map((cat: any) => ({
     slug: cat.slug as string,
-    title: (cat.title_en ?? cat.title_es) as string,
+    title: loc(cat, 'title', lang) as string,
     // "rows": cada obra en un bloque con su fila de piezas. Si no, muro en columnas.
     byWork: cat.layout === 'rows',
     // descarta lo que quedó sin archivo subido en Sanity
@@ -31,22 +37,22 @@ for (const cat of categories) {
   for (const item of cat.items) {
     const startsWork = !item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link
     if (startsWork) lead = item
-    const description = lead.description_en ?? lead.description_es
+    const description = loc(lead, 'description', lang)
     const moreLinks = (lead.moreLinks ?? [])
       .filter((l: any) => l?.url)
-      .map((l: any) => ({ href: l.url, label: l.label || 'Visit' }))
+      .map((l: any) => ({ href: l.url, label: tr(l, 'label') || T.visit }))
     const piece = {
       kind: item._type === 'artVideo' ? 'video' : 'image',
       groups: [cat.slug],
       image: item._type === 'artVideo' ? undefined : item,
       videoUrl: item.videoUrl,
       poster: item.poster,
-      title: item.title,
-      details: item.details,
+      title: tr(item, 'title'),
+      details: tr(item, 'details'),
       year: item.year,
       description,
       link: lead.link,
-      linkLabel: lead.linkLabel,
+      linkLabel: tr(lead, 'linkLabel'),
       moreLinks,
       sideBySide: item.sideBySide === true,
     } as WallItem
@@ -58,11 +64,11 @@ for (const cat of categories) {
     if (startsWork || !row) {
       row = {
         groups: [cat.slug],
-        title: lead.title,
-        meta: [lead.details, lead.year].filter(Boolean).join(', '),
+        title: tr(lead, 'title'),
+        meta: [tr(lead, 'details'), lead.year].filter(Boolean).join(', '),
         description,
         link: lead.link,
-        linkLabel: lead.linkLabel,
+        linkLabel: tr(lead, 'linkLabel'),
         moreLinks,
         items: [],
       }
@@ -83,28 +89,26 @@ const shareImage = firstImage
   : undefined
 
 const names = categories.map((cat: any) => cat.title.toLowerCase())
-const description = names.length > 0
-  ? `Personal work by Eloísa Nieto: ${names.join(', ')}.`
-  : 'Personal work by Eloísa Nieto.'
+const description = T.artDescription(names)
 ---
 
-<Layout title="Art — Eloísa Nieto" description={description} image={shareImage} section="art">
+<Layout title={`${T.nav.art} — Eloísa Nieto`} description={description} image={shareImage} section="art">
 
   <div slot="sidebar">
     {categories.length > 1 && (
       <WallFilters
-        label="Art categories"
+        label={T.artCategories}
         active={first}
         options={categories.map((cat: any) => ({ value: cat.slug, label: cat.title, count: cat.items.length }))}
       />
     )}
   </div>
 
-  <h1 class="visually-hidden">Art</h1>
+  <h1 class="visually-hidden">{T.nav.art}</h1>
 
-  {allPieces.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+  {allPieces.length === 0 && <p class="empty-note">{T.empty}</p>}
 
-  <MediaWall items={items} rows={rows} label="Art" initialGroup={categories.length > 1 ? first : 'all'} useHash />
+  <MediaWall items={items} rows={rows} label={T.nav.art} initialGroup={categories.length > 1 ? first : 'all'} useHash />
 </Layout>
 
 <style>

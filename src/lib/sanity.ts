@@ -84,7 +84,7 @@ export async function getEntry(type: Collection, slug: string) {
   return client.fetch(
     `*[_type == $type && (slug_en.current == $slug || slug_es.current == $slug)]
       | order(select(slug_en.current == $slug => 0, 1) asc)[0]{
-      _id, _type, title_en, title_es, slug_en, slug_es, headline_en,
+      _id, _type, title_en, title_es, slug_en, slug_es, headline_en, headline_es,
       year, agency, role, sector, tags,
       contextAndChallenge_en, solution_en, results_en,
       contextAndChallenge_es, solution_es, results_es,
@@ -107,7 +107,7 @@ export function slugOf(entry: any): string | undefined {
 // Documento único con imágenes y videos sueltos, en el orden en que se ven.
 export async function getMisc() {
   return client.fetch(`*[_type == "misc"][0]{
-    intro_en,
+    intro_en, intro_es,
     items[hidden != true]{
       _key, _type, caption, year,
       asset, crop, hotspot, ${IMG_META},
@@ -124,8 +124,9 @@ export async function getArtCategories() {
     _id, title_en, title_es, layout,
     "slug": slug.current,
     items[hidden != true]{
-      _key, _type, title, details, year,
-      description_en, description_es, link, linkLabel, moreLinks[]{ label, url }, sideBySide,
+      _key, _type, title, title_es, details, details_es, year,
+      description_en, description_es, link, linkLabel, linkLabel_es,
+      moreLinks[]{ label, label_es, url }, sideBySide,
       asset, crop, hotspot, ${IMG_META},
       "videoUrl": file.asset->url,
       poster{ asset, ${IMG_META} }

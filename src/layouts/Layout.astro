@@ -2,6 +2,7 @@
 // src/layouts/Layout.astro
 import { getProfile, urlFor } from '../lib/sanity'
 import Footer from '../components/Footer.astro'
+import { href, langOf, loc, switchPath, ui } from '../lib/i18n'
 
 const profile = await getProfile()
 
@@ -19,16 +20,23 @@ interface Props {
   headlineAsH1?: boolean
   /** Frase propia de la página (un proyecto o workshop); reemplaza la de la sección */
   headline?: string
+  /** Ruta de esta misma página en el otro idioma (por defecto se arma cambiando el prefijo /es) */
+  altHref?: string
 }
+
+// Idioma de la página: inglés en la raíz, español bajo /es
+const lang = langOf(Astro.url)
+const other = lang === 'en' ? 'es' : 'en'
+const T = ui[lang]
 
 const name = profile?.name ?? 'Eloísa Nieto'
 
 // Encabezado del sitio: se edita en Sanity (Perfil → bio_en).
-const DEFAULT_HEADLINE = profile?.bio_en?.trim() || 'seeking beauty and functionality in the digital world'
+const DEFAULT_HEADLINE = profile?.[`bio_${lang}`]?.trim() || T.defaultHeadline
 // Palabras del encabezado que van en la tipografía alterna (si aparecen en el texto)
-const HEADLINE_ACCENTS = ['beauty', 'functionality', 'looks', 'works']
+const HEADLINE_ACCENTS = ['beauty', 'functionality', 'looks', 'works', 'belleza', 'funcionalidad']
 
-const DEFAULT_DESCRIPTION = `${name} is a web and UI designer based in Santiago, Chile, seeking beauty and functionality in the digital world. Web design, brand identity and art direction.`
+const DEFAULT_DESCRIPTION = T.siteDescription(name)
 
 const {
   title = name,
@@ -39,8 +47,12 @@ const {
   headlineAsH1 = false,
   section,
   headline,
+  altHref,
 } = Astro.props
-const currentPath = Astro.url.pathname
+// La ruta sin el prefijo de idioma, para deducir la sección
+const currentPath = switchPath(Astro.url.pathname, 'en')
+// Esta misma página en el otro idioma
+const otherHref = altHref ?? switchPath(Astro.url.pathname, other)
 const activeSection =
   section ??
   (currentPath.startsWith('/about') ? 'about' : currentPath.startsWith('/workshops') ? 'workshops' : currentPath.startsWith('/art') ? 'art' : currentPath.startsWith('/misc') ? 'misc' : 'work')
@@ -63,10 +75,10 @@ function highlight(text: string, words: string[]) {
 // Cada sección tiene su propia frase (Sanity: Perfil → Frases del encabezado).
 // Work usa la bio corta; las demás caen en ella si su campo está vacío.
 const sectionHeadlines: Record<string, string | undefined> = {
-  workshops: profile?.headline_workshops_en,
-  art: profile?.headline_art_en,
-  misc: profile?.headline_misc_en,
-  about: profile?.headline_about_en,
+  workshops: loc(profile, 'headline_workshops', lang),
+  art: loc(profile, 'headline_art', lang),
+  misc: loc(profile, 'headline_misc', lang),
+  about: loc(profile, 'headline_about', lang),
 }
 const HEADLINE = headline?.trim() || sectionHeadlines[activeSection]?.trim() || DEFAULT_HEADLINE
 const headlineHtml = highlight(HEADLINE, HEADLINE_ACCENTS)
@@ -83,7 +95,7 @@ const personLd = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name,
-  jobTitle: 'Web & UI Designer',
+  jobTitle: T.jobTitle,
   description: DEFAULT_DESCRIPTION,
   ...(Astro.site ? { url: Astro.site.href } : {}),
   ...(profile?.photo ? { image: urlFor(profile.photo).width(600).height(600).fit('crop').url() } : {}),
@@ -94,7 +106,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <script is:inline>
       // Lo antes posible: fija el esquema oscuro sobre <html> para que no haya
@@ -115,13 +127,15 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     <meta name="description" content={description} />
     <meta name="author" content={name} />
     {canonical && <link rel="canonical" href={canonical} />}
+    {Astro.site && <link rel="alternate" hreflang={lang} href={new URL(Astro.url.pathname, Astro.site).href} />}
+    {Astro.site && <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />}
     <meta name="theme-color" content="#faf6f6" />
 
     <meta property="og:type" content={type} />
     <meta property="og:site_name" content={name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content={lang === 'es' ? 'es_CL' : 'en_US'} />
     {canonical && <meta property="og:url" content={canonical} />}
     {shareImage && <meta property="og:image" content={shareImage} />}
     {shareImage && <meta property="og:image:width" content="1200" />}
@@ -153,16 +167,17 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     </script>
 
     <header class="top-nav">
-      <a href="/" class="site-name">{name}</a>
-      <nav class="nav-links" aria-label="Main">
-        <a href="/" class={activeSection === 'work' ? 'active' : ''} aria-current={activeSection === 'work' && currentPath === '/' ? 'page' : undefined}>Work</a>
-        <a href="/workshops" class={activeSection === 'workshops' ? 'active' : ''}>Workshops</a>
-        <a href="/art" class={activeSection === 'art' ? 'active' : ''}>Art</a>
-        <a href="/misc" class={activeSection === 'misc' ? 'active' : ''}>Misc</a>
-        <a href="/about" class={activeSection === 'about' ? 'active' : ''}>About</a>
+      <a href={href('/', lang)} class="site-name">{name}</a>
+      <nav class="nav-links" aria-label={T.navLabel}>
+        <a href={href('/', lang)} class={activeSection === 'work' ? 'active' : ''} aria-current={activeSection === 'work' && currentPath === '/' ? 'page' : undefined}>{T.nav.work}</a>
+        <a href={href('/workshops', lang)} class={activeSection === 'workshops' ? 'active' : ''}>{T.nav.workshops}</a>
+        <a href={href('/art', lang)} class={activeSection === 'art' ? 'active' : ''}>{T.nav.art}</a>
+        <a href={href('/misc', lang)} class={activeSection === 'misc' ? 'active' : ''}>{T.nav.misc}</a>
+        <a href={href('/about', lang)} class={activeSection === 'about' ? 'active' : ''}>{T.nav.about}</a>
       </nav>
       <div class="nav-right">
-        <button class="icon-btn" id="font-toggle" aria-label="Change typography">
+        <a class="nav-lang" href={otherHref} hreflang={other} lang={other} aria-label={T.switchLabel}>{T.switchTo}</a>
+        <button class="icon-btn" id="font-toggle" aria-label={T.fontToggle}>
           <svg class="arrow-sans" width="23" height="14" viewBox="0 0 23 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6.64062 13.2812L0 6.64062L6.64062 0L8.28125 1.65039L4.49219 5.44922H18.3984L14.5898 1.65039L16.2402 0L22.8711 6.64062L16.2402 13.2812L14.5898 11.6309L18.3984 7.8418H4.49219L8.28125 11.6309L6.64062 13.2812Z" fill="currentColor"/>
           </svg>
@@ -170,7 +185,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
             <path d="M18.4473 3.30078V3.74023C17.8353 4.02018 17.2331 4.39779 16.6406 4.87305C16.0482 5.34831 15.3288 6.06771 14.4824 7.03125H13.7012C14.1504 5.91146 14.7819 4.89909 15.5957 3.99414H2.85156C3.66536 4.89909 4.29688 5.91146 4.74609 7.03125H3.96484C3.11849 6.06771 2.39909 5.34831 1.80664 4.87305C1.21419 4.39779 0.611979 4.02018 0 3.74023V3.30078C0.611979 3.01432 1.21419 2.63672 1.80664 2.16797C2.39909 1.69271 3.11849 0.970052 3.96484 0H4.74609C4.29688 1.11979 3.66536 2.13216 2.85156 3.03711H15.5957C14.7819 2.13216 14.1504 1.11979 13.7012 0H14.4824C15.3288 0.970052 16.0482 1.69271 16.6406 2.16797C17.2331 2.63672 17.8353 3.01432 18.4473 3.30078Z" fill="currentColor"/>
           </svg>
         </button>
-        <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+        <button class="icon-btn" id="theme-toggle" aria-label={T.themeToggle}>
           <svg class="ast-sans" width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5.34545 14.2206L5.66788 9.43515L1.68 12.1164L0 9.23152L4.3103 7.12727L0 5.02303L1.68 2.10424L5.66788 4.78545L5.34545 0H8.65454L8.34909 4.78545L12.337 2.10424L14 5.02303L9.70667 7.12727L14 9.23152L12.337 12.1164L8.34909 9.43515L8.65454 14.2206H5.34545Z" fill="currentColor"/>
           </svg>
@@ -296,7 +311,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
             event.preventDefault()
             const ok = await copyText(link.dataset.copy ?? '')
             if (!hint) return
-            hint.textContent = ok ? 'copied' : 'press ⌘C'
+            hint.textContent = ok ? hint.dataset.copied ?? 'copied' : hint.dataset.press ?? 'press ⌘C'
             hint.classList.add('is-copied')
             window.clearTimeout(timer)
             timer = window.setTimeout(() => {

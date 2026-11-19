@@ -4,6 +4,7 @@ import Layout from '../layouts/Layout.astro'
 import Img from './Img.astro'
 import { urlFor } from '../lib/sanity'
 import { fmtRole, excerpt } from '../lib/labels'
+import { fmtLinkLabel, fmtSector, href, langOf, loc, slugFor, ui } from '../lib/i18n'
 
 interface Props {
   project: any
@@ -13,10 +14,14 @@ interface Props {
 const { project, section } = Astro.props
 const isWorkshop = section === 'workshops'
 
-const title = project.title_en ?? project.title_es
-const context = project.contextAndChallenge_en ?? project.contextAndChallenge_es
-const solution = project.solution_en ?? project.solution_es
-const results = project.results_en ?? project.results_es
+const lang = langOf(Astro.url)
+const other = lang === 'en' ? 'es' : 'en'
+const T = ui[lang]
+
+const title = loc(project, 'title', lang)
+const context = loc(project, 'contextAndChallenge', lang)
+const solution = loc(project, 'solution', lang)
+const results = loc(project, 'results', lang)
 const credits = (project.credits ?? []).filter((c: any) => c?.role_en || c?.role_es)
 
 // Muestras y reconocimientos, por año descendente (mismo formato que en About)
@@ -31,13 +36,18 @@ const twoCol = (context || solution) && results?.length > 0
 const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || item?.videoUrl)
 
 // Los workshops se etiquetan con tags; los proyectos, con role
-const roles = ((isWorkshop ? project.tags : project.role) ?? []).map(fmtRole)
-const back = isWorkshop ? { href: '/workshops', label: 'Workshops' } : { href: '/', label: 'Work' }
+const roles = ((isWorkshop ? project.tags : project.role) ?? []).map((r: string) => fmtRole(r, lang))
+const back = isWorkshop
+  ? { href: href('/workshops', lang), label: T.nav.workshops }
+  : { href: href('/', lang), label: T.nav.work }
+// Esta misma página en el otro idioma (cada idioma tiene su propio slug)
+const base = isWorkshop ? '/workshops' : '/work'
+const altHref = href(`${base}/${slugFor(project, other)}`, other)
 
 // ── SEO ────────────────────────────────────────────────────
 const description =
   excerpt(context ?? solution) ||
-  `${title}${roles.length ? ` — ${roles.join(', ')}` : ''}${project.year ? ` (${project.year})` : ''}. ${isWorkshop ? 'A workshop' : 'A project'} by Eloísa Nieto.`
+  `${title}${roles.length ? ` — ${roles.join(', ')}` : ''}${project.year ? ` (${project.year})` : ''}. ${isWorkshop ? T.aWorkshop : T.aProject} ${T.by} Eloísa Nieto.`
 const shareImage = project.coverImage
   ? urlFor(project.coverImage).width(1200).height(630).fit('crop').auto('format').url()
   : undefined
@@ -55,7 +65,7 @@ const jsonLd = {
 let imageCount = 0
 ---
 
-<Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd} section={section} headline={project.headline_en}>
+<Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd} section={section} headline={loc(project, 'headline', lang)} altHref={altHref}>
   <article class="project">
 
     <!-- Portada a ancho completo (hero) -->
@@ -84,27 +94,27 @@ let imageCount = 0
       <div class="project-meta">
         {roles.length > 0 && (
           <div class="meta-item">
-            <span class="meta-label">{isWorkshop ? 'Type' : 'Role'}</span>
+            <span class="meta-label">{isWorkshop ? T.type : T.role}</span>
             <span class="meta-value">{roles.join(', ')}</span>
           </div>
         )}
         {project.sector?.length > 0 && (
           <div class="meta-item">
-            <span class="meta-label">Sector</span>
-            <span class="meta-value">{project.sector.join(', ')}</span>
+            <span class="meta-label">{T.sector}</span>
+            <span class="meta-value">{project.sector.map((s: string) => fmtSector(s, lang)).join(', ')}</span>
           </div>
         )}
         {project.agency && (
           <div class="meta-item">
-            <span class="meta-label">Agency</span>
+            <span class="meta-label">{T.agency}</span>
             <span class="meta-value">{project.agency}</span>
           </div>
         )}
         {project.link && (
           <div class="meta-item">
-            <span class="meta-label">{project.linkLabel ?? 'Site'}</span>
+            <span class="meta-label">{fmtLinkLabel(project.linkLabel, lang)}</span>
             <a class="meta-value meta-link" href={project.link} target="_blank" rel="noopener">
-              Visit
+              {T.visit}
               <span class="arrow-swap">
                 <span>↗</span>
                 <span>↗</span>
@@ -126,7 +136,7 @@ let imageCount = 0
 
           {results?.length > 0 && (
             <div class="project-results">
-              <span class="meta-label">Results</span>
+              <span class="meta-label">{T.results}</span>
               <ul class="results-list">
                 {results.map((r: string) => <li>{r}</li>)}
               </ul>
@@ -156,7 +166,7 @@ let imageCount = 0
               ) : (
                 <Img
                   image={item}
-                  alt={item.caption ?? `${title} — image ${imageCount}`}
+                  alt={item.caption ?? `${title} — ${T.image} ${imageCount}`}
                   widths={[640, 960, 1400, 2000]}
                   sizes={isNarrow
                     ? '(max-width: 700px) 100vw, (max-width: 1000px) 50vw, calc((100vw - 548px) / 2)'
@@ -173,7 +183,7 @@ let imageCount = 0
     <!-- Muestras y reconocimientos, editables desde el CMS -->
     {screenings.length > 0 && (
       <section class="project-rows">
-        <h2 class="meta-label">Screenings &amp; Exhibitions</h2>
+        <h2 class="meta-label">{T.screenings}</h2>
         <ul class="rows-list">
           {screenings.map((s: any) => (
             <li class="row">
@@ -188,7 +198,7 @@ let imageCount = 0
 
     {awards.length > 0 && (
       <section class="project-rows">
-        <h2 class="meta-label">Awards</h2>
+        <h2 class="meta-label">{T.awards}</h2>
         <ul class="rows-list">
           {awards.map((a: any) => (
             <li class="row">
@@ -204,11 +214,11 @@ let imageCount = 0
     <!-- Créditos, editables desde el CMS -->
     {credits.length > 0 && (
       <section class="project-credits">
-        <span class="meta-label">Credits</span>
+        <span class="meta-label">{T.credits}</span>
         <div class="credits-grid">
           {credits.map((c: any) => (
             <div class="credit-item">
-              <span class="credit-role">{c.role_en ?? c.role_es}</span>
+              <span class="credit-role">{loc(c, 'role', lang)}</span>
               {(c.names ?? []).map((n: string) => (
                 <span class="credit-name">{n}</span>
               ))}
@@ -220,7 +230,7 @@ let imageCount = 0
 
     <!-- Volver -->
     <div class="project-nav">
-      <a href={back.href}>← Back to {back.label}</a>
+      <a href={back.href}>← {T.backTo} {back.label}</a>
     </div>
 
   </article>

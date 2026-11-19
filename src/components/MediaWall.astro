@@ -2,6 +2,7 @@
 // Muro de imágenes y videos en columnas de alto libre, con visor en grande.
 // Lo usan Misc y Art. Los filtros (WallFilters.astro) muestran un grupo a la vez.
 import WallPiece from './WallPiece.astro'
+import { langOf, ui } from '../lib/i18n'
 
 export interface WallItem {
   kind: 'image' | 'video'
@@ -72,6 +73,7 @@ for (const item of items) {
 }
 // En las filas lado a lado cada pieza ocupa una fracción del ancho del contenido
 const sideSizes = (n: number) => ["(max-width: 1000px) ", Math.round(100 * (1 / n)), "vw, calc((100vw - 524px) * ", (1 / n).toFixed(4), ")"].join("")
+const T = ui[langOf(Astro.url)]
 // Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
 let shown = 0
 ---
@@ -89,8 +91,8 @@ let shown = 0
             {row.meta && <p class="group-meta">{row.meta}</p>}
           </div>
           <div class="group-nav">
-            <button class="group-btn" type="button" data-strip="prev" aria-label="Scroll back">←</button>
-            <button class="group-btn" type="button" data-strip="next" aria-label="Scroll forward">→</button>
+            <button class="group-btn" type="button" data-strip="prev" aria-label={T.scrollBack}>←</button>
+            <button class="group-btn" type="button" data-strip="next" aria-label={T.scrollForward}>→</button>
           </div>
         </header>
         {(row.description || row.link || row.moreLinks?.length) && (
@@ -99,7 +101,7 @@ let shown = 0
             {(row.link || row.moreLinks?.length) && (
               <div class="group-links">
                 {row.link && (
-                  <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || 'Visit'}</a>
+                  <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || T.visit}</a>
                 )}
                 {(row.moreLinks ?? []).map((l) => (
                   <a class="group-link" href={l.href} target="_blank" rel="noopener">{l.label}</a>
@@ -108,7 +110,7 @@ let shown = 0
             )}
           </div>
         )}
-        <div class="group-strip" tabindex="0" aria-label={row.title ? `${row.title}: images` : 'Images'}>
+        <div class="group-strip" tabindex="0" aria-label={row.title ? `${row.title}: ${T.images.toLowerCase()}` : T.images}>
           {row.items.map((item) => (
             <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={ROW_SIZES} caption={false} />
           ))}
@@ -138,10 +140,10 @@ let shown = 0
 </div>
 
 <!-- Visor: la imagen o el video en grande, con sonido y controles -->
-<dialog class="wall-viewer" aria-label="Viewer" data-lenis-prevent>
+<dialog class="wall-viewer" aria-label={T.viewer} data-lenis-prevent>
   <div class="viewer-bar">
     <span class="viewer-count" aria-live="polite"></span>
-    <button class="viewer-btn" type="button" data-action="close">Close</button>
+    <button class="viewer-btn" type="button" data-action="close">{T.close}</button>
   </div>
   <div class="viewer-stage"></div>
   <div class="viewer-foot">
@@ -154,8 +156,8 @@ let shown = 0
       </div>
     </div>
     <div class="viewer-nav">
-      <button class="viewer-btn" type="button" data-action="prev" aria-label="Previous">←</button>
-      <button class="viewer-btn" type="button" data-action="next" aria-label="Next">→</button>
+      <button class="viewer-btn" type="button" data-action="prev" aria-label={T.previous}>←</button>
+      <button class="viewer-btn" type="button" data-action="next" aria-label={T.next}>→</button>
     </div>
   </div>
 </dialog>

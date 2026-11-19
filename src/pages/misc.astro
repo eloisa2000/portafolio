@@ -5,6 +5,10 @@ import Layout from '../layouts/Layout.astro'
 import MediaWall, { type WallItem } from '../components/MediaWall.astro'
 import WallFilters from '../components/WallFilters.astro'
 import { getMisc, urlFor } from '../lib/sanity'
+import { langOf, loc, ui } from '../lib/i18n'
+
+const lang = langOf(Astro.url)
+const T = ui[lang]
 
 const misc = await getMisc()
 
@@ -27,32 +31,32 @@ const shareImage = firstImage
 ---
 
 <Layout
-  title="Misc — Eloísa Nieto"
-  description="Loose images and videos by Eloísa Nieto: posters, animations and other odds and ends."
+  title={`${T.nav.misc} — Eloísa Nieto`}
+  description={T.miscDescription}
   image={shareImage}
   section="misc"
 >
 
   <div slot="sidebar" class="wall-side">
-    {misc?.intro_en && <p class="wall-intro">{misc.intro_en}</p>}
+    {loc(misc, 'intro', lang) && <p class="wall-intro">{loc(misc, 'intro', lang)}</p>}
     {hasImages && hasVideos && (
       <WallFilters
-        label="Filter by type"
+        label={T.filterByType}
         active="all"
         options={[
-          { value: 'all', label: 'All' },
-          { value: 'image', label: 'Images' },
-          { value: 'video', label: 'Videos' },
+          { value: 'all', label: T.all },
+          { value: 'image', label: T.images },
+          { value: 'video', label: T.videos },
         ]}
       />
     )}
   </div>
 
-  <h1 class="visually-hidden">Misc</h1>
+  <h1 class="visually-hidden">{T.nav.misc}</h1>
 
-  {items.length === 0 && <p class="empty-note">Nothing here yet.</p>}
+  {items.length === 0 && <p class="empty-note">{T.empty}</p>}
 
-  <MediaWall items={items} label="Loose images and videos" />
+  <MediaWall items={items} label={T.miscLabel} />
 </Layout>
 
 <style>

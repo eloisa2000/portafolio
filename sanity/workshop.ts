@@ -53,6 +53,12 @@ export default defineType({
       type: 'string',
       description: 'Opcional. Una línea que resume el proyecto; aparece junto a la foto al entrar a su página. Pon *asteriscos* alrededor de las palabras que van en la tipografía alterna. Si queda vacío, se usa la frase de la sección.',
     }),
+    defineField({
+      name: 'headline_es',
+      title: 'Frase del encabezado (ES)',
+      type: 'string',
+      description: 'Opcional. Una línea que resume el proyecto; aparece junto a la foto al entrar a su página. Pon *asteriscos* alrededor de las palabras que van en la tipografía alterna. Si queda vacío, se usa la frase de la sección.',
+    }),
     defineField({ name: 'year', title: 'Año', type: 'number' }),
     defineField({ name: 'agency', title: 'Institución / Agencia', type: 'string' }),
     defineField({ name: 'featured', title: 'Destacado (va primero)', type: 'boolean', initialValue: false }),
