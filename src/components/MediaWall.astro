@@ -95,10 +95,10 @@ let shown = 0
             <button class="group-btn" type="button" data-strip="next" aria-label={T.scrollForward}>→</button>
           </div>
         </header>
-        {(row.description || row.link || row.moreLinks?.length) && (
+        {(row.description || row.link || !!row.moreLinks?.length) && (
           <div class="group-text">
             {row.description && <p class="group-description">{row.description}</p>}
-            {(row.link || row.moreLinks?.length) && (
+            {(row.link || !!row.moreLinks?.length) && (
               <div class="group-links">
                 {row.link && (
                   <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || T.visit}</a>
