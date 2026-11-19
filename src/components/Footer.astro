@@ -1,23 +1,29 @@
 ---
 // Footer compartido: se usa dentro del sidebar (desktop) y al final de la página (mobile).
+import { langOf, loc, ui } from '../lib/i18n'
+
 interface Props {
   profile: any
   variant: 'desktop' | 'mobile'
 }
 const { profile, variant } = Astro.props
+const lang = langOf(Astro.url)
+const T = ui[lang]
+const location = loc(profile, 'location', lang)
 ---
 
 <footer class={`footer footer-${variant}`}>
   <a href="https://another-meditation-timer.figma.site/" target="_blank" rel="noopener" class="meditate-link">
-    meditate for free
+    {T.meditate}
   </a>
   <hr />
   <div class="footer-row">
     <div class="footer-col">
       {profile?.email && (
         <span class="email-row">
-          <a href={`mailto:${profile.email}`} class="link-underline">{profile.email}</a>
-          <button type="button" class="copy-btn" data-copy={profile.email} aria-label={`Copy ${profile.email}`}>copy</button>
+          {/* Con mouse: un click copia el mail (ver Layout). En touch o sin JS: abre el correo. */}
+          <a href={`mailto:${profile.email}`} class="link-underline email-link" data-copy={profile.email}>{profile.email}</a>
+          <span class="copy-hint" aria-live="polite" data-idle={T.copy} data-copied={T.copied} data-press={T.pressCopy}>{T.copy}</span>
         </span>
       )}
       <div class="footer-social">
@@ -30,7 +36,7 @@ const { profile, variant } = Astro.props
       </div>
     </div>
     <div class="footer-col right">
-      {profile?.location_en && <span>{profile.location_en}</span>}
+      {location && <span>{location}</span>}
       <span class="clock"></span>
     </div>
   </div>

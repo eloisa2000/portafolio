@@ -1,0 +1,856 @@
+---
+// Muro de imágenes y videos en columnas de alto libre, con visor en grande.
+// Lo usan Misc y Art. Los filtros (WallFilters.astro) muestran un grupo a la vez.
+import WallPiece from './WallPiece.astro'
+import { langOf, ui } from '../lib/i18n'
+
+export interface WallItem {
+  kind: 'image' | 'video'
+  /** grupos a los que pertenece la pieza (los valores de los filtros) */
+  groups: string[]
+  /** imagen de Sanity (con lqip y dims) cuando kind es "image" */
+  image?: any
+  videoUrl?: string
+  /** imagen de Sanity que hace de portada del video */
+  poster?: any
+  title?: string
+  details?: string
+  year?: number
+  /** texto que se lee en el visor, bajo la pieza */
+  description?: string
+  /** enlace externo (sitio, video completo, fanzine...) */
+  link?: string
+  linkLabel?: string
+  /** otros enlaces de la misma obra */
+  moreLinks?: { href: string; label: string }[]
+  /** se alinea en una fila, lado a lado, con las piezas vecinas que también lo tengan */
+  sideBySide?: boolean
+}
+
+/** Una obra presentada como bloque: título, texto y sus piezas en una fila horizontal */
+export interface WallRow {
+  groups: string[]
+  title?: string
+  /** línea bajo el título: técnica, año... */
+  meta?: string
+  description?: string
+  link?: string
+  linkLabel?: string
+  moreLinks?: { href: string; label: string }[]
+  items: WallItem[]
+}
+
+interface Props {
+  /** piezas del muro en columnas */
+  items: WallItem[]
+  /** obras presentadas por bloque, cada una con su fila de piezas */
+  rows?: WallRow[]
+  /** nombre del muro para lectores de pantalla */
+  label: string
+  /** grupo visible al cargar; "all" muestra todo */
+  initialGroup?: string
+  /** guarda el grupo activo en la URL (#grupo) para poder compartirlo */
+  useHash?: boolean
+}
+
+const { items, rows = [], label, initialGroup = 'all', useHash = false } = Astro.props
+
+// Ancho de cada columna del muro según el layout (ver CSS más abajo)
+const SIZES = '(max-width: 1000px) 50vw, (max-width: 1500px) calc((100vw - 540px) / 2), calc((100vw - 572px) / 3)'
+// En las filas las piezas tienen alto fijo; su ancho ronda este valor
+const ROW_SIZES = '(max-width: 1000px) 70vw, 560px'
+
+const inGroup = (groups: string[]) => initialGroup === 'all' || groups.includes(initialGroup)
+
+// El muro se arma por tramos: piezas sueltas en columnas y, entre medio, filas de
+// piezas "lado a lado" (las seguidas del mismo grupo que tienen sideBySide).
+const segments: any[] = []
+for (const item of items) {
+  const last = segments[segments.length - 1]
+  if (!item.sideBySide) segments.push(item)
+  else if (last && 'side' in last && last.side[0].groups.join() === item.groups.join()) last.side.push(item)
+  else segments.push({ side: [item] })
+}
+// En las filas lado a lado cada pieza ocupa una fracción del ancho del contenido
+const sideSizes = (n: number) => ["(max-width: 1000px) ", Math.round(100 * (1 / n)), "vw, calc((100vw - 524px) * ", (1 / n).toFixed(4), ")"].join("")
+const T = ui[langOf(Astro.url)]
+// Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
+let shown = 0
+---
+
+<div class="wall-root" data-use-hash={useHash ? '' : undefined}>
+
+  <!-- Obras por bloque: título + fila horizontal de piezas -->
+  {rows.map((row) => {
+    const visible = inGroup(row.groups)
+    return (
+      <section class="wall-group" data-groups={row.groups.join(' ')} hidden={!visible}>
+        <header class="group-head">
+          <div class="group-heading">
+            {row.title && <h2 class="group-title">{row.title}</h2>}
+            {row.meta && <p class="group-meta">{row.meta}</p>}
+          </div>
+          <div class="group-nav">
+            <button class="group-btn" type="button" data-strip="prev" aria-label={T.scrollBack}>←</button>
+            <button class="group-btn" type="button" data-strip="next" aria-label={T.scrollForward}>→</button>
+          </div>
+        </header>
+        {(row.description || row.link || row.moreLinks?.length) && (
+          <div class="group-text">
+            {row.description && <p class="group-description">{row.description}</p>}
+            {(row.link || row.moreLinks?.length) && (
+              <div class="group-links">
+                {row.link && (
+                  <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || T.visit}</a>
+                )}
+                {(row.moreLinks ?? []).map((l) => (
+                  <a class="group-link" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div class="group-strip" tabindex="0" aria-label={row.title ? `${row.title}: ${T.images.toLowerCase()}` : T.images}>
+          {row.items.map((item) => (
+            <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={ROW_SIZES} caption={false} />
+          ))}
+        </div>
+      </section>
+    )
+  })}
+
+  <!-- Muro en columnas -->
+  <section class="media-wall" aria-label={label}>
+    {segments.map((segment) => {
+      if ('side' in segment) {
+        const visible = inGroup(segment.side[0].groups)
+        return (
+          <div class="wall-side" style={`--n:${segment.side.length}`}>
+            {segment.side.map((item) => (
+              <WallPiece item={item} visible={visible} eager={visible && shown++ < 3} sizes={sideSizes(segment.side.length)} />
+            ))}
+          </div>
+        )
+      }
+      const visible = inGroup(segment.groups)
+      return <WallPiece item={segment} visible={visible} eager={visible && shown++ < 3} sizes={SIZES} />
+    })}
+  </section>
+
+</div>
+
+<!-- Visor: la imagen o el video en grande, con sonido y controles -->
+<dialog class="wall-viewer" aria-label={T.viewer} data-lenis-prevent>
+  <div class="viewer-bar">
+    <span class="viewer-count" aria-live="polite"></span>
+    <button class="viewer-btn" type="button" data-action="close">{T.close}</button>
+  </div>
+  <div class="viewer-stage"></div>
+  <div class="viewer-foot">
+    <div class="viewer-text">
+      <p class="viewer-caption"></p>
+      <p class="viewer-description" hidden></p>
+      <div class="viewer-links">
+        <a class="viewer-link" target="_blank" rel="noopener" hidden></a>
+        <span class="viewer-more"></span>
+      </div>
+    </div>
+    <div class="viewer-nav">
+      <button class="viewer-btn" type="button" data-action="prev" aria-label={T.previous}>←</button>
+      <button class="viewer-btn" type="button" data-action="next" aria-label={T.next}>→</button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /* MURO — columnas de alto libre: cada pieza conserva su proporción */
+  .media-wall {
+    columns: 3;
+    column-gap: 1.5rem;
+  }
+
+  @media (max-width: 1500px) {
+    .media-wall { columns: 2; }
+  }
+
+  /* FILA LADO A LADO — cruza todas las columnas y reparte sus piezas en partes iguales */
+  .wall-side {
+    column-span: all;
+    display: grid;
+    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* Con JS el muro se arma en orden de lectura: las primeras piezas quedan en la fila
+     de arriba, de izquierda a derecha (ver layoutWall). Sin JS se queda en columnas CSS. */
+  .media-wall.is-laid-out { columns: auto; }
+
+  .media-wall :global(.wall-cols) {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .media-wall :global(.wall-col) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* OBRAS POR BLOQUE — título, texto y una fila de piezas de alto fijo */
+  .wall-group {
+    margin-bottom: 4rem;
+  }
+
+  .wall-group[hidden] { display: none; }
+
+  .group-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .group-title {
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--indigo);
+  }
+
+  .group-meta {
+    margin-top: 0.2rem;
+    font-size: 1.0625rem;
+    color: var(--lila);
+  }
+
+  .group-nav {
+    display: flex;
+    gap: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  /* sin nada que deslizar, las flechas no se muestran */
+  .group-nav[hidden] { display: none; }
+
+  .group-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.25rem;
+    color: var(--indigo);
+    padding: 0;
+    line-height: 1.1;
+  }
+
+  .group-btn:disabled {
+    color: var(--lila);
+    cursor: default;
+  }
+
+  .group-btn:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  .group-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  .group-description {
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    color: var(--indigo);
+  }
+
+  .group-links,
+  .viewer-links,
+  .viewer-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.5rem;
+  }
+
+  .viewer-more :global(a) {
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .viewer-more :global(a:hover) { border-bottom-color: transparent; }
+
+  .viewer-more :global(a)::after { content: ' ↗'; }
+
+  .group-link {
+    width: fit-content;
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .group-link:hover { border-bottom-color: transparent; }
+
+  .group-link::after { content: ' ↗'; }
+
+  .group-strip {
+    display: flex;
+    gap: 1rem;
+    height: clamp(260px, 46vh, 460px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .group-strip::-webkit-scrollbar { display: none; }
+
+  .group-strip:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  /* cada pieza toma el alto de la fila y el ancho que le da su proporción */
+  .group-strip :global(.wall-item) {
+    flex: 0 0 auto;
+    height: 100%;
+    margin-bottom: 0;
+    scroll-snap-align: start;
+  }
+
+  .group-strip :global(.wall-open) {
+    width: auto;
+    height: 100%;
+  }
+
+  .group-strip :global(.img-frame) {
+    width: auto;
+    height: 100%;
+  }
+
+  /* VISOR */
+  .wall-viewer {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 1.25rem 2rem 1.5rem 1.75rem;
+    border: none;
+    background: transparent;
+    color: var(--indigo);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  .wall-viewer[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+  }
+
+  .wall-viewer::backdrop { background: transparent; }
+
+  /* El fondo es una capa aparte para poder fundirlo de 0 a 100 al abrir */
+  .wall-viewer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    opacity: 0;
+    transition: opacity 0.42s ease;
+  }
+
+  .wall-viewer.is-open::before { opacity: 1; }
+
+  .wall-viewer .viewer-bar,
+  .wall-viewer .viewer-foot {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .wall-viewer.is-open .viewer-bar,
+  .wall-viewer.is-open .viewer-foot {
+    opacity: 1;
+    transition-delay: 0.14s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wall-viewer::before,
+    .wall-viewer .viewer-bar,
+    .wall-viewer .viewer-foot { transition: none; }
+  }
+
+  .viewer-bar,
+  .viewer-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  .viewer-foot { align-items: flex-end; }
+
+  .viewer-count { font-size: 1.25rem; color: var(--lila); }
+
+  .viewer-caption {
+    font-size: 1.0625rem;
+    line-height: 1.4;
+    min-height: 1.4em;
+  }
+
+  .viewer-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .viewer-description {
+    max-width: 68ch;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--lila);
+    /* textos largos: no le quitan más alto a la pieza */
+    max-height: 6.6em;
+    overflow-y: auto;
+  }
+
+  .viewer-link {
+    width: fit-content;
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .viewer-link:hover { border-bottom-color: transparent; }
+
+  .viewer-link::after { content: ' ↗'; }
+
+  .viewer-nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+  }
+
+  .viewer-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.25rem;
+    color: var(--indigo);
+    padding: 0;
+    line-height: 1.1;
+  }
+
+  .viewer-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .viewer-btn:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  .viewer-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    cursor: zoom-out;
+  }
+
+  .viewer-stage :global(img),
+  .viewer-stage :global(video) {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: default;
+  }
+
+  @media (max-width: 1000px) {
+    .media-wall { column-gap: 1rem; }
+    .media-wall :global(.wall-cols) { gap: 1rem; }
+    .wall-side { column-gap: 1rem; }
+    .wall-group { margin-bottom: 3rem; }
+    .group-strip {
+      height: clamp(220px, 38vh, 340px);
+      /* la fila llega hasta el borde de la pantalla */
+      margin: 0 calc(var(--gutter) * -1);
+      padding: 0 var(--gutter);
+      scroll-padding: 0 var(--gutter);
+    }
+    .group-title { font-size: 1.4rem; }
+    .wall-viewer { padding: 1.1rem var(--gutter) 1.25rem; }
+  }
+</style>
+
+<script>
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const wall = document.querySelector<HTMLElement>('.wall-root')
+  const groupSections = Array.from(document.querySelectorAll<HTMLElement>('.wall-group'))
+  const viewer = document.querySelector<HTMLDialogElement>('.wall-viewer')
+  const figures = Array.from(document.querySelectorAll<HTMLElement>('.wall-item'))
+  const openers = figures.map((f) => f.querySelector<HTMLButtonElement>('.wall-open')!)
+
+  // ── Videos del muro: sin sonido, y solo andan mientras están a la vista ──
+  const wallVideos = Array.from(document.querySelectorAll<HTMLVideoElement>('.wall-video-frame video'))
+
+  wallVideos.forEach((video) => {
+    video.addEventListener('loadeddata', () => video.closest('.img-frame')?.classList.add('is-settled'), { once: true })
+  })
+
+  if (!reduceMotion && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement
+          if (entry.isIntersecting && !viewer?.open) {
+            if (!video.src && video.dataset.src) video.src = video.dataset.src
+            video.play().catch(() => {})
+          } else {
+            video.pause()
+          }
+        })
+      },
+      { rootMargin: '200px 0px' }
+    )
+    wallVideos.forEach((video) => observer.observe(video))
+  }
+
+  // ── Muro en orden de lectura ──
+  // Las columnas CSS se llenan de arriba abajo, así que "lo primero" quedaría en la
+  // primera columna. Aquí cada pieza visible va, en su orden, a la columna más corta:
+  // las primeras quedan arriba, de izquierda a derecha, y las columnas salen parejas.
+  const wallEl = document.querySelector<HTMLElement>('.media-wall')
+  // orden original: piezas sueltas y filas "lado a lado"
+  const sequence = wallEl ? (Array.from(wallEl.children) as HTMLElement[]) : []
+  const twoColumns = window.matchMedia('(max-width: 1500px)')
+  const GAP = 0.06 // separación entre piezas, en anchos de columna (aprox.)
+
+  // alto de una pieza medido en anchos de columna, según su proporción
+  function heightOf(el: HTMLElement) {
+    const ratio = parseFloat(el.querySelector<HTMLElement>('.img-frame')?.style.aspectRatio ?? '') || 1
+    return 1 / ratio + (el.querySelector('figcaption') ? 0.1 : 0) + GAP
+  }
+
+  function layoutWall() {
+    if (!wallEl || sequence.length === 0) return
+    const n = twoColumns.matches ? 2 : 3
+    const out = document.createDocumentFragment()
+    let cols: HTMLElement[] = []
+    let heights: number[] = []
+    let open = false
+    for (const el of sequence) {
+      // una fila "lado a lado" corta el muro: lo que sigue parte en columnas nuevas
+      if (el.classList.contains('wall-side')) {
+        out.append(el)
+        open = false
+        continue
+      }
+      if (!open) {
+        const block = document.createElement('div')
+        block.className = 'wall-cols'
+        cols = Array.from({ length: n }, () => {
+          const col = document.createElement('div')
+          col.className = 'wall-col'
+          return col
+        })
+        heights = new Array(n).fill(0)
+        block.append(...cols)
+        out.append(block)
+        open = true
+      }
+      // las piezas ocultas por el filtro no ocupan lugar
+      if (el.hidden) {
+        cols[0].append(el)
+        continue
+      }
+      let k = 0
+      for (let i = 1; i < n; i++) if (heights[i] < heights[k] - 0.001) k = i
+      cols[k].append(el)
+      heights[k] += heightOf(el)
+    }
+    wallEl.replaceChildren(out)
+    wallEl.classList.add('is-laid-out')
+  }
+
+  layoutWall()
+  twoColumns.addEventListener('change', layoutWall)
+
+  // ── Filtros: muestran un grupo de piezas a la vez ──
+  const filters = Array.from(document.querySelectorAll<HTMLButtonElement>('.wall-filter'))
+  const useHash = wall?.hasAttribute('data-use-hash') ?? false
+
+  function applyFilter(group: string, updateHash = true) {
+    filters.forEach((b) => {
+      const on = b.dataset.group === group
+      b.classList.toggle('active', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+    ;[...figures, ...groupSections].forEach((f) => {
+      f.hidden = group !== 'all' && !(f.dataset.groups ?? '').split(' ').includes(group)
+    })
+    layoutWall()
+    updateStrips()
+    if (useHash && updateHash) history.replaceState(null, '', `#${group}`)
+  }
+
+  filters.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyFilter(btn.dataset.group ?? 'all')
+      // al cambiar de grupo se vuelve al inicio del muro
+      window.scrollTo({ top: 0 })
+    })
+  })
+
+  // ── Filas de cada obra: las flechas deslizan la fila de lado ──
+  function updateStrip(section: HTMLElement) {
+    const strip = section.querySelector<HTMLElement>('.group-strip')
+    const nav = section.querySelector<HTMLElement>('.group-nav')
+    if (!strip || !nav) return
+    const max = strip.scrollWidth - strip.clientWidth
+    nav.hidden = max <= 4
+    const prev = nav.querySelector<HTMLButtonElement>('[data-strip="prev"]')
+    const next = nav.querySelector<HTMLButtonElement>('[data-strip="next"]')
+    if (prev) prev.disabled = strip.scrollLeft <= 2
+    if (next) next.disabled = strip.scrollLeft >= max - 2
+  }
+  function updateStrips() {
+    groupSections.forEach((section) => {
+      if (!section.hidden) updateStrip(section)
+    })
+  }
+
+  groupSections.forEach((section) => {
+    const strip = section.querySelector<HTMLElement>('.group-strip')
+    if (!strip) return
+    section.querySelectorAll<HTMLButtonElement>('[data-strip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.strip === 'prev' ? -1 : 1
+        const from = strip.scrollLeft
+        const target = from + dir * strip.clientWidth * 0.8
+        strip.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' })
+        // si el navegador no anima el desplazamiento, se salta directo
+        window.setTimeout(() => {
+          if (strip.scrollLeft === from) strip.scrollTo({ left: target, behavior: 'auto' })
+        }, 350)
+      })
+    })
+    strip.addEventListener('scroll', () => updateStrip(section), { passive: true })
+    // el ancho de la fila cambia a medida que cargan las imágenes
+    strip.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => updateStrip(section), { once: true }))
+  })
+  window.addEventListener('resize', updateStrips)
+  updateStrips()
+
+  // Enlace directo a un grupo: /art#photography
+  function fromHash() {
+    const group = decodeURIComponent(location.hash.slice(1))
+    if (group && filters.some((b) => b.dataset.group === group)) applyFilter(group, false)
+  }
+  if (useHash) {
+    fromHash()
+    window.addEventListener('hashchange', fromHash)
+  }
+
+  // ── Visor ──
+  const stage = viewer?.querySelector<HTMLElement>('.viewer-stage')
+  const captionEl = viewer?.querySelector<HTMLElement>('.viewer-caption')
+  const countEl = viewer?.querySelector<HTMLElement>('.viewer-count')
+  const descriptionEl = viewer?.querySelector<HTMLElement>('.viewer-description')
+  const linkEl = viewer?.querySelector<HTMLAnchorElement>('.viewer-link')
+  let current = -1
+
+  // Solo se recorren las piezas visibles con el filtro actual
+  const visible = () => openers.filter((_, i) => !figures[i].hidden)
+
+  function show(index: number) {
+    if (!viewer || !stage) return
+    const list = visible()
+    if (list.length === 0) return
+    current = (index + list.length) % list.length
+    const opener = list[current]
+
+    // Primero los textos: su alto define cuánto espacio le queda a la pieza
+    if (captionEl) captionEl.textContent = opener.dataset.caption ?? ''
+    if (descriptionEl) {
+      descriptionEl.textContent = opener.dataset.description ?? ''
+      descriptionEl.hidden = !opener.dataset.description
+      descriptionEl.scrollTop = 0
+    }
+    if (linkEl) {
+      linkEl.hidden = !opener.dataset.link
+      linkEl.textContent = opener.dataset.linkLabel ?? ''
+      if (opener.dataset.link) linkEl.href = opener.dataset.link
+      else linkEl.removeAttribute('href')
+    }
+    const moreEl = viewer.querySelector<HTMLElement>('.viewer-more')
+    if (moreEl) {
+      const more: { href: string; label: string }[] = JSON.parse(opener.dataset.moreLinks ?? '[]')
+      moreEl.replaceChildren(
+        ...more.map((l) => {
+          const a = document.createElement('a')
+          a.href = l.href
+          a.textContent = l.label
+          a.target = '_blank'
+          a.rel = 'noopener'
+          return a
+        })
+      )
+    }
+    if (countEl) countEl.textContent = `${current + 1} / ${list.length}`
+
+    // Tamaño final de la pieza: lo más grande que cabe en el escenario con su proporción
+    stage.replaceChildren()
+    const thumb = opener.getBoundingClientRect()
+    const box = stage.getBoundingClientRect()
+    const ratio = thumb.height > 0 ? thumb.width / thumb.height : 1
+    const width = Math.min(box.width, box.height * ratio)
+    const fit = (el: HTMLElement) => {
+      el.style.width = `${Math.round(width)}px`
+      el.style.height = `${Math.round(width / ratio)}px`
+    }
+
+    if (opener.dataset.kind === 'video') {
+      const video = document.createElement('video')
+      video.src = opener.dataset.full ?? ''
+      if (opener.dataset.poster) video.poster = opener.dataset.poster
+      video.controls = true
+      video.playsInline = true
+      video.loop = true
+      video.autoplay = true
+      fit(video)
+      stage.append(video)
+    } else {
+      const img = document.createElement('img')
+      img.alt = opener.dataset.caption ?? ''
+      const full = opener.dataset.full ?? ''
+      const small = opener.querySelector('img')
+      if (small?.currentSrc && small.naturalWidth > 0) {
+        // se ve de inmediato con la miniatura y se cambia por la grande cuando termina de cargar
+        img.src = small.currentSrc
+        const big = new Image()
+        big.onload = () => {
+          if (img.isConnected) img.src = full
+        }
+        big.src = full
+      } else {
+        img.src = full
+      }
+      fit(img)
+      stage.append(img)
+    }
+  }
+
+  // ── Apertura y cierre animados: la pieza viaja entre su lugar en el muro y el centro ──
+  const EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)'
+  let closing: number | undefined
+
+  // transform que lleva la pieza del visor a calzar sobre su miniatura
+  function toThumb(media: HTMLElement, opener: HTMLElement) {
+    const from = opener.getBoundingClientRect()
+    const to = media.getBoundingClientRect()
+    if (to.width === 0 || to.height === 0) return 'none'
+    return `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`
+  }
+
+  function openViewer(opener: HTMLButtonElement) {
+    if (!viewer) return
+    window.clearTimeout(closing)
+    wallVideos.forEach((v) => v.pause())
+    viewer.showModal()
+    show(visible().indexOf(opener))
+    const media = stage?.firstElementChild as HTMLElement | null
+    if (media && !reduceMotion) {
+      media.animate(
+        [
+          { transformOrigin: 'top left', transform: toThumb(media, opener) },
+          { transformOrigin: 'top left', transform: 'none' },
+        ],
+        { duration: 420, easing: EASE }
+      )
+    }
+    // fuerza un reflow para que el fundido del fondo parta desde 0
+    void viewer.offsetWidth
+    viewer.classList.add('is-open')
+  }
+
+  function closeViewer() {
+    if (!viewer?.open) return
+    const opener = visible()[current]
+    const media = stage?.firstElementChild as HTMLElement | null
+    viewer.classList.remove('is-open')
+    if (reduceMotion || !media || !opener) {
+      viewer.close()
+      return
+    }
+    if (media instanceof HTMLVideoElement) media.pause()
+    media.animate(
+      [
+        { transformOrigin: 'top left', transform: 'none' },
+        { transformOrigin: 'top left', transform: toThumb(media, opener) },
+      ],
+      { duration: 260, easing: EASE, fill: 'forwards' }
+    )
+    window.clearTimeout(closing)
+    closing = window.setTimeout(() => viewer.close(), 260)
+  }
+
+  openers.forEach((opener) => opener.addEventListener('click', () => openViewer(opener)))
+
+  // Esc cierra con la misma animación
+  viewer?.addEventListener('cancel', (event) => {
+    event.preventDefault()
+    closeViewer()
+  })
+
+  // al cambiar el tamaño de la ventana la pieza se vuelve a ajustar
+  window.addEventListener('resize', () => {
+    if (viewer?.open) show(current)
+  })
+
+  viewer?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement
+    const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+    if (action === 'close') closeViewer()
+    else if (action === 'prev') show(current - 1)
+    else if (action === 'next') show(current + 1)
+    // click en el espacio vacío alrededor de la pieza: cierra
+    else if (target === stage) closeViewer()
+  })
+
+  viewer?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft') show(current - 1)
+    if (event.key === 'ArrowRight') show(current + 1)
+  })
+
+  viewer?.addEventListener('close', () => {
+    viewer.classList.remove('is-open')
+    const opener = visible()[current]
+    // al cerrar se corta el video (y su sonido) y vuelven a andar los del muro
+    stage?.replaceChildren()
+    if (!reduceMotion) {
+      wallVideos.forEach((v) => {
+        const r = v.getBoundingClientRect()
+        if (v.src && r.bottom > 0 && r.top < window.innerHeight) v.play().catch(() => {})
+      })
+    }
+    opener?.focus({ preventScroll: true })
+  })
+</script>

@@ -1,0 +1,16 @@
+---
+import EntryPage from '../../components/EntryPage.astro'
+import { getWorkshops, getEntry, slugOf } from '../../lib/sanity'
+
+export async function getStaticPaths() {
+  const entries = await getWorkshops()
+  return entries.filter(slugOf).map((entry: any) => ({ params: { slug: slugOf(entry) } }))
+}
+
+const { slug } = Astro.params
+const entry = await getEntry('workshop', slug!)
+
+if (!entry) return Astro.redirect('/workshops')
+---
+
+<EntryPage project={entry} section="workshops" />

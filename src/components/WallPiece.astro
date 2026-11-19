@@ -1,0 +1,129 @@
+---
+// Una pieza (imagen o video) de un MediaWall: el botón que la abre en el visor
+// y, opcionalmente, su pie con título y detalles.
+import Img from './Img.astro'
+import { urlFor } from '../lib/sanity'
+import type { WallItem } from './MediaWall.astro'
+import { langOf, ui } from '../lib/i18n'
+
+interface Props {
+  item: WallItem
+  /** si no es visible con el filtro inicial, sale oculta */
+  visible?: boolean
+  eager?: boolean
+  /** atributo sizes de la imagen, según el ancho que ocupa en el layout */
+  sizes: string
+  /** muestra el pie con título y detalles bajo la pieza */
+  caption?: boolean
+}
+
+const { item, visible = true, eager = false, sizes, caption = true } = Astro.props
+
+const fullUrl = (image: any) => urlFor(image).width(2400).auto('format').quality(85).url()
+const posterUrl = (image: any) => urlFor(image).width(960).auto('format').quality(75).url()
+
+const T = ui[langOf(Astro.url)]
+const video = item.kind === 'video'
+const name = item.title || (video ? T.video : T.image)
+const meta = [item.details, item.year].filter(Boolean).join(', ')
+const ratio = video ? item.poster?.dims?.aspectRatio : undefined
+---
+
+<figure class="wall-item" data-groups={item.groups.join(' ')} hidden={!visible}>
+  <button
+    class="wall-open"
+    type="button"
+    aria-label={`${T.open} ${name}`}
+    data-kind={item.kind}
+    data-full={video ? item.videoUrl : fullUrl(item.image)}
+    data-poster={video && item.poster?.asset ? posterUrl(item.poster) : undefined}
+    data-caption={[item.title, meta].filter(Boolean).join(' — ') || undefined}
+    data-description={item.description || undefined}
+    data-link={item.link || undefined}
+    data-link-label={item.link ? item.linkLabel || T.visit : undefined}
+    data-more-links={item.moreLinks?.length ? JSON.stringify(item.moreLinks) : undefined}
+  >
+    {video ? (
+      <span
+        class="img-frame wall-video-frame"
+        style={[
+          ratio ? `aspect-ratio:${ratio}` : '',
+          item.poster?.lqip ? `background-image:url(${item.poster.lqip})` : '',
+        ].filter(Boolean).join(';')}
+      >
+        <video
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster={item.poster?.asset ? posterUrl(item.poster) : undefined}
+          data-src={item.videoUrl}
+          aria-hidden="true"
+          tabindex="-1"
+        ></video>
+      </span>
+    ) : (
+      <Img
+        image={item.image}
+        alt={item.title ?? ''}
+        widths={[320, 480, 720, 960, 1400]}
+        sizes={sizes}
+        eager={eager}
+      />
+    )}
+  </button>
+  {caption && (item.title || meta) && (
+    <figcaption>
+      {item.title && <span class="wall-title">{item.title}</span>}
+      {meta && <span class="wall-meta">{meta}</span>}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .wall-item {
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
+  }
+
+  .wall-item[hidden] { display: none; }
+
+  .wall-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    font: inherit;
+    color: inherit;
+  }
+
+  .wall-open:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 3px;
+  }
+
+  .wall-video-frame video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .wall-item figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.6rem;
+    margin-top: 0.45rem;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+  }
+
+  .wall-title { color: var(--indigo); }
+  .wall-meta { color: var(--lila); }
+
+  @media (max-width: 1000px) {
+    .wall-item { margin-bottom: 1rem; }
+  }
+</style>

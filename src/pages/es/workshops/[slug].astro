@@ -1,0 +1,20 @@
+---
+// Versión en español de la página de un workshop: usa el slug en español.
+import EntryPage from '../../../components/EntryPage.astro'
+import { getWorkshops, getEntry } from '../../../lib/sanity'
+import { slugFor } from '../../../lib/i18n'
+
+export async function getStaticPaths() {
+  const entries = await getWorkshops()
+  return entries
+    .filter((entry: any) => slugFor(entry, 'es'))
+    .map((entry: any) => ({ params: { slug: slugFor(entry, 'es') } }))
+}
+
+const { slug } = Astro.params
+const entry = await getEntry('workshop', slug!)
+
+if (!entry) return Astro.redirect('/es/workshops')
+---
+
+<EntryPage project={entry} section="workshops" />

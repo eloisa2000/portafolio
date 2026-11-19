@@ -1,0 +1,17 @@
+---
+import ProjectsPage from '../components/ProjectsPage.astro'
+import { getProjects } from '../lib/sanity'
+import { langOf, ui } from '../lib/i18n'
+
+const T = ui[langOf(Astro.url)]
+const projects = await getProjects()
+---
+
+<ProjectsPage
+  projects={projects}
+  title={`Eloísa Nieto — ${T.homeTitle}`}
+  section="work"
+  basePath="/work"
+  label={T.selectedWork}
+  headlineAsH1
+/>
