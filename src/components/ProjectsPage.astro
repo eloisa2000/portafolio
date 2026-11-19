@@ -38,10 +38,12 @@ const allSectors = [...sectorOrder.filter(s => sectorsInUse.has(s)), ...[...sect
 const COVER_RATIO = 677 / 437
 const COVER_SIZES = '(max-width: 1000px) 100vw, (max-width: 1300px) calc(100vw - 524px), calc((100vw - 548px) / 2)'
 
-// Imágenes de la galería que se van mostrando al hacer hover sobre la portada
+// Imágenes de la galería que se van mostrando al hacer hover sobre la portada.
+// Se piden completas (sin recortar): si no calzan con la proporción de la portada,
+// se ven enteras sobre un fondo desenfocado de la misma imagen (ver CSS).
 function previewUrls(project: any) {
   return (project.previews ?? []).map((img: any) =>
-    urlFor(img).width(960).height(Math.round(960 / COVER_RATIO)).fit('crop').auto('format').quality(75).url()
+    urlFor(img).width(960).fit('max').auto('format').quality(75).url()
   )
 }
 
@@ -220,16 +222,37 @@ const shareImage = projects[0]?.coverImage
     aspect-ratio: 677 / 437;
   }
 
-  /* las imágenes de preview las crea el JS encima de la portada */
+  /* las previews las crea el JS encima de la portada: cada una es un marco con
+     la imagen completa (fit) y, detrás, la misma imagen desenfocada llenando el marco (fill) */
   .cover-wrap :global(.preview-img) {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    overflow: hidden;
+    background: var(--bg);
     opacity: 0;
     transition: opacity 0.5s ease;
     pointer-events: none;
+  }
+
+  .cover-wrap :global(.preview-img img) {
+    position: absolute;
+    display: block;
+  }
+
+  .cover-wrap :global(.preview-bg) {
+    /* se agranda un poco para que el desenfoque no deje bordes claros */
+    inset: -10%;
+    width: 120%;
+    height: 120%;
+    object-fit: cover;
+    filter: blur(22px);
+  }
+
+  .cover-wrap :global(.preview-fg) {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .cover-wrap :global(.preview-img.on) {
@@ -416,7 +439,7 @@ const shareImage = projects[0]?.coverImage
   // Solo en dispositivos con puntero (en touch no existe el hover),
   // y las imágenes recién se descargan la primera vez que se pasa el mouse.
   const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
-  // tiempo que se queda cada imagen (incluye el fundido de 1s)
+  // tiempo que se queda cada imagen (incluye el fundido de 0,5 s)
   const STEP_MS = 2400
 
   if (canHover) {
@@ -425,6 +448,7 @@ const shareImage = projects[0]?.coverImage
       const link = wrap.closest('a')
       if (urls.length === 0 || !link) return
 
+      let frames: HTMLElement[] = []
       let imgs: HTMLImageElement[] = []
       let index = 0 // 0 = portada, 1..n = previews
       let timer: number | undefined
@@ -432,19 +456,29 @@ const shareImage = projects[0]?.coverImage
       function load() {
         if (imgs.length > 0) return
         imgs = urls.map((url) => {
-          const img = new Image()
-          img.className = 'preview-img'
-          img.alt = ''
-          img.decoding = 'async'
-          img.src = url
-          wrap.appendChild(img)
+          const frame = document.createElement('div')
+          frame.className = 'preview-img'
+          // la misma imagen dos veces: desenfocada al fondo y completa encima
+          const make = (cls: string) => {
+            const img = new Image()
+            img.className = cls
+            img.alt = ''
+            img.decoding = 'async'
+            img.src = url
+            frame.appendChild(img)
+            return img
+          }
+          make('preview-bg')
+          const img = make('preview-fg')
+          wrap.appendChild(frame)
+          frames.push(frame)
           return img
         })
       }
 
       function show(next: number) {
         index = next
-        imgs.forEach((img, i) => img.classList.toggle('on', i === index - 1))
+        frames.forEach((frame, i) => frame.classList.toggle('on', i === index - 1))
       }
 
       function advance() {
