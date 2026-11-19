@@ -1,0 +1,128 @@
+---
+// Art: obra personal por categorías (Photography, Digital Drawing...).
+// Cada categoría es un documento "artCategory" en Sanity con su lista de piezas;
+// las categorías nuevas aparecen solas en la lista de la izquierda.
+import Layout from '../layouts/Layout.astro'
+import MediaWall, { type WallItem, type WallRow } from '../components/MediaWall.astro'
+import WallFilters from '../components/WallFilters.astro'
+import { getArtCategories, urlFor } from '../lib/sanity'
+import { langOf, loc, ui } from '../lib/i18n'
+
+const lang = langOf(Astro.url)
+const T = ui[lang]
+// Título, ficha y texto de enlace de una pieza: el campo base es el inglés y "_es" el español
+const tr = (obj: any, field: string) => (lang === 'es' ? obj?.[`${field}_es`] || obj?.[field] : obj?.[field])
+
+const categories = (await getArtCategories())
+  .map((cat: any) => ({
+    slug: cat.slug as string,
+    title: loc(cat, 'title', lang) as string,
+    // "rows": cada obra en un bloque con su fila de piezas. Si no, muro en columnas.
+    byWork: cat.layout === 'rows',
+    // descarta lo que quedó sin archivo subido en Sanity
+    items: (cat.items ?? []).filter((item: any) => (item._type === 'artVideo' ? item.videoUrl : item.asset)),
+  }))
+  // una categoría sin piezas no se muestra
+  .filter((cat: any) => cat.slug && cat.items.length > 0)
+
+// Piezas del muro y obras por bloque, según la presentación de cada categoría
+const items: WallItem[] = []
+const rows: WallRow[] = []
+
+for (const cat of categories) {
+  // Una obra puede tener varias piezas seguidas con el mismo título: la descripción
+  // y el enlace se escriben solo en la primera, y las demás los heredan.
+  let lead: any
+  let row: WallRow | undefined
+  for (const item of cat.items) {
+    const startsWork = !item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link
+    if (startsWork) lead = item
+    const description = loc(lead, 'description', lang)
+    const moreLinks = (lead.moreLinks ?? [])
+      .filter((l: any) => l?.url)
+      .map((l: any) => ({ href: l.url, label: tr(l, 'label') || T.visit }))
+    const piece = {
+      kind: item._type === 'artVideo' ? 'video' : 'image',
+      groups: [cat.slug],
+      image: item._type === 'artVideo' ? undefined : item,
+      videoUrl: item.videoUrl,
+      poster: item.poster,
+      title: tr(item, 'title'),
+      details: tr(item, 'details'),
+      year: item.year,
+      description,
+      link: lead.link,
+      linkLabel: tr(lead, 'linkLabel'),
+      moreLinks,
+      sideBySide: item.sideBySide === true,
+    } as WallItem
+
+    if (!cat.byWork) {
+      items.push(piece)
+      continue
+    }
+    if (startsWork || !row) {
+      row = {
+        groups: [cat.slug],
+        title: tr(lead, 'title'),
+        meta: [tr(lead, 'details'), lead.year].filter(Boolean).join(', '),
+        description,
+        link: lead.link,
+        linkLabel: tr(lead, 'linkLabel'),
+        moreLinks,
+        items: [],
+      }
+      rows.push(row)
+    }
+    row.items.push(piece)
+  }
+}
+
+const allPieces = [...rows.flatMap((row) => row.items), ...items]
+
+// Al entrar se ve la primera categoría
+const first = categories[0]?.slug
+
+const firstImage = allPieces.find((item) => item.kind === 'image')?.image
+const shareImage = firstImage
+  ? urlFor(firstImage).width(1200).height(630).fit('crop').auto('format').url()
+  : undefined
+
+const names = categories.map((cat: any) => cat.title.toLowerCase())
+const description = T.artDescription(names)
+---
+
+<Layout title={`${T.nav.art} — Eloísa Nieto`} description={description} image={shareImage} section="art">
+
+  <div slot="sidebar">
+    {categories.length > 1 && (
+      <WallFilters
+        label={T.artCategories}
+        active={first}
+        options={categories.map((cat: any) => ({ value: cat.slug, label: cat.title, count: cat.items.length }))}
+      />
+    )}
+  </div>
+
+  <h1 class="visually-hidden">{T.nav.art}</h1>
+
+  {allPieces.length === 0 && <p class="empty-note">{T.empty}</p>}
+
+  <MediaWall items={items} rows={rows} label={T.nav.art} initialGroup={categories.length > 1 ? first : 'all'} useHash />
+</Layout>
+
+<style>
+  .empty-note {
+    font-size: 1.0625rem;
+    color: var(--lila);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
