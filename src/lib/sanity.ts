@@ -53,13 +53,14 @@ const CARD_FIELDS = `
   tags,
   featured,
   coverImage{ ..., ${IMG_META} },
-  // Imágenes que se muestran al hacer hover sobre la portada:
-  // las marcadas en Sanity con "showInPreview"; si no hay ninguna marcada,
-  // las primeras 4 de la galería.
+  // Imágenes que se muestran al hacer hover sobre la portada. Solo las horizontales:
+  // llenan el marco de la portada sin perder casi nada al recortarse.
+  // Van las marcadas en Sanity con "showInPreview"; si no hay ninguna marcada
+  // (o ninguna horizontal entre ellas), las primeras 4 horizontales de la galería.
   "previews": select(
-    count(gallery[_type == "image" && defined(asset) && showInPreview == true]) > 0 =>
-      gallery[_type == "image" && defined(asset) && showInPreview == true][0...6]{ asset, crop, hotspot },
-    gallery[_type == "image" && defined(asset)][0...4]{ asset, crop, hotspot }
+    count(gallery[_type == "image" && defined(asset) && showInPreview == true && asset->metadata.dimensions.aspectRatio > 1.1]) > 0 =>
+      gallery[_type == "image" && defined(asset) && showInPreview == true && asset->metadata.dimensions.aspectRatio > 1.1][0...6]{ asset, crop, hotspot },
+    gallery[_type == "image" && defined(asset) && asset->metadata.dimensions.aspectRatio > 1.1][0...4]{ asset, crop, hotspot }
   )
 `
 

@@ -38,12 +38,10 @@ const allSectors = [...sectorOrder.filter(s => sectorsInUse.has(s)), ...[...sect
 const COVER_RATIO = 677 / 437
 const COVER_SIZES = '(max-width: 1000px) 100vw, (max-width: 1300px) calc(100vw - 524px), calc((100vw - 548px) / 2)'
 
-// Imágenes de la galería que se van mostrando al hacer hover sobre la portada.
-// Se piden completas (sin recortar): si no calzan con la proporción de la portada,
-// se ven enteras sobre un fondo desenfocado de la misma imagen (ver CSS).
+// Imágenes de la galería que se van mostrando al hacer hover sobre la portada
 function previewUrls(project: any) {
   return (project.previews ?? []).map((img: any) =>
-    urlFor(img).width(960).fit('max').auto('format').quality(75).url()
+    urlFor(img).width(960).height(Math.round(960 / COVER_RATIO)).fit('crop').auto('format').quality(75).url()
   )
 }
 
@@ -222,37 +220,16 @@ const shareImage = projects[0]?.coverImage
     aspect-ratio: 677 / 437;
   }
 
-  /* las previews las crea el JS encima de la portada: cada una es un marco con
-     la imagen completa (fit) y, detrás, la misma imagen desenfocada llenando el marco (fill) */
+  /* las imágenes de preview las crea el JS encima de la portada */
   .cover-wrap :global(.preview-img) {
     position: absolute;
     inset: 0;
-    overflow: hidden;
-    background: var(--bg);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     opacity: 0;
     transition: opacity 0.5s ease;
     pointer-events: none;
-  }
-
-  .cover-wrap :global(.preview-img img) {
-    position: absolute;
-    display: block;
-  }
-
-  .cover-wrap :global(.preview-bg) {
-    /* se agranda un poco para que el desenfoque no deje bordes claros */
-    inset: -10%;
-    width: 120%;
-    height: 120%;
-    object-fit: cover;
-    filter: blur(22px);
-  }
-
-  .cover-wrap :global(.preview-fg) {
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
   }
 
   .cover-wrap :global(.preview-img.on) {
@@ -448,7 +425,6 @@ const shareImage = projects[0]?.coverImage
       const link = wrap.closest('a')
       if (urls.length === 0 || !link) return
 
-      let frames: HTMLElement[] = []
       let imgs: HTMLImageElement[] = []
       let index = 0 // 0 = portada, 1..n = previews
       let timer: number | undefined
@@ -456,29 +432,19 @@ const shareImage = projects[0]?.coverImage
       function load() {
         if (imgs.length > 0) return
         imgs = urls.map((url) => {
-          const frame = document.createElement('div')
-          frame.className = 'preview-img'
-          // la misma imagen dos veces: desenfocada al fondo y completa encima
-          const make = (cls: string) => {
-            const img = new Image()
-            img.className = cls
-            img.alt = ''
-            img.decoding = 'async'
-            img.src = url
-            frame.appendChild(img)
-            return img
-          }
-          make('preview-bg')
-          const img = make('preview-fg')
-          wrap.appendChild(frame)
-          frames.push(frame)
+          const img = new Image()
+          img.className = 'preview-img'
+          img.alt = ''
+          img.decoding = 'async'
+          img.src = url
+          wrap.appendChild(img)
           return img
         })
       }
 
       function show(next: number) {
         index = next
-        frames.forEach((frame, i) => frame.classList.toggle('on', i === index - 1))
+        imgs.forEach((img, i) => img.classList.toggle('on', i === index - 1))
       }
 
       function advance() {
