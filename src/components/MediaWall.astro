@@ -20,6 +20,8 @@ export interface WallItem {
   /** enlace externo (sitio, video completo, fanzine...) */
   link?: string
   linkLabel?: string
+  /** otros enlaces de la misma obra */
+  moreLinks?: { href: string; label: string }[]
   /** se alinea en una fila, lado a lado, con las piezas vecinas que también lo tengan */
   sideBySide?: boolean
 }
@@ -33,6 +35,7 @@ export interface WallRow {
   description?: string
   link?: string
   linkLabel?: string
+  moreLinks?: { href: string; label: string }[]
   items: WallItem[]
 }
 
@@ -90,11 +93,18 @@ let shown = 0
             <button class="group-btn" type="button" data-strip="next" aria-label="Scroll forward">→</button>
           </div>
         </header>
-        {(row.description || row.link) && (
+        {(row.description || row.link || row.moreLinks?.length) && (
           <div class="group-text">
             {row.description && <p class="group-description">{row.description}</p>}
-            {row.link && (
-              <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || 'Visit'}</a>
+            {(row.link || row.moreLinks?.length) && (
+              <div class="group-links">
+                {row.link && (
+                  <a class="group-link" href={row.link} target="_blank" rel="noopener">{row.linkLabel || 'Visit'}</a>
+                )}
+                {(row.moreLinks ?? []).map((l) => (
+                  <a class="group-link" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -138,7 +148,10 @@ let shown = 0
     <div class="viewer-text">
       <p class="viewer-caption"></p>
       <p class="viewer-description" hidden></p>
-      <a class="viewer-link" target="_blank" rel="noopener" hidden></a>
+      <div class="viewer-links">
+        <a class="viewer-link" target="_blank" rel="noopener" hidden></a>
+        <span class="viewer-more"></span>
+      </div>
     </div>
     <div class="viewer-nav">
       <button class="viewer-btn" type="button" data-action="prev" aria-label="Previous">←</button>
@@ -253,6 +266,24 @@ let shown = 0
     line-height: 1.5;
     color: var(--indigo);
   }
+
+  .group-links,
+  .viewer-links,
+  .viewer-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.5rem;
+  }
+
+  .viewer-more :global(a) {
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .viewer-more :global(a:hover) { border-bottom-color: transparent; }
+
+  .viewer-more :global(a)::after { content: ' ↗'; }
 
   .group-link {
     width: fit-content;
@@ -666,6 +697,20 @@ let shown = 0
       linkEl.textContent = opener.dataset.linkLabel ?? ''
       if (opener.dataset.link) linkEl.href = opener.dataset.link
       else linkEl.removeAttribute('href')
+    }
+    const moreEl = viewer.querySelector<HTMLElement>('.viewer-more')
+    if (moreEl) {
+      const more: { href: string; label: string }[] = JSON.parse(opener.dataset.moreLinks ?? '[]')
+      moreEl.replaceChildren(
+        ...more.map((l) => {
+          const a = document.createElement('a')
+          a.href = l.href
+          a.textContent = l.label
+          a.target = '_blank'
+          a.rel = 'noopener'
+          return a
+        })
+      )
     }
     if (countEl) countEl.textContent = `${current + 1} / ${list.length}`
 

@@ -39,6 +39,7 @@ const ratio = video ? item.poster?.dims?.aspectRatio : undefined
     data-description={item.description || undefined}
     data-link={item.link || undefined}
     data-link-label={item.link ? item.linkLabel || 'Visit' : undefined}
+    data-more-links={item.moreLinks?.length ? JSON.stringify(item.moreLinks) : undefined}
   >
     {video ? (
       <span

@@ -32,6 +32,9 @@ for (const cat of categories) {
     const startsWork = !item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link
     if (startsWork) lead = item
     const description = lead.description_en ?? lead.description_es
+    const moreLinks = (lead.moreLinks ?? [])
+      .filter((l: any) => l?.url)
+      .map((l: any) => ({ href: l.url, label: l.label || 'Visit' }))
     const piece = {
       kind: item._type === 'artVideo' ? 'video' : 'image',
       groups: [cat.slug],
@@ -44,6 +47,7 @@ for (const cat of categories) {
       description,
       link: lead.link,
       linkLabel: lead.linkLabel,
+      moreLinks,
       sideBySide: item.sideBySide === true,
     } as WallItem
 
@@ -59,6 +63,7 @@ for (const cat of categories) {
         description,
         link: lead.link,
         linkLabel: lead.linkLabel,
+        moreLinks,
         items: [],
       }
       rows.push(row)

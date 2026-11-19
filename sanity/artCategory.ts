@@ -32,6 +32,23 @@ const pieceFields = [
     type: 'string',
   }),
   defineField({
+    name: 'moreLinks',
+    title: 'Más enlaces',
+    description: 'Opcional. Otros enlaces de la misma obra; se muestran junto al enlace principal.',
+    type: 'array',
+    of: [
+      defineArrayMember({
+        type: 'object',
+        name: 'extraLink',
+        fields: [
+          defineField({ name: 'label', title: 'Texto del enlace', type: 'string' }),
+          defineField({ name: 'url', title: 'Enlace', type: 'url', validation: (r) => r.required() }),
+        ],
+        preview: { select: { title: 'label', subtitle: 'url' } },
+      }),
+    ],
+  }),
+  defineField({
     name: 'sideBySide',
     title: 'Lado a lado',
     description:

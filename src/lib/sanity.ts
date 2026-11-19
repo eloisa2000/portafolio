@@ -124,7 +124,7 @@ export async function getArtCategories() {
     "slug": slug.current,
     items[hidden != true]{
       _key, _type, title, details, year,
-      description_en, description_es, link, linkLabel, sideBySide,
+      description_en, description_es, link, linkLabel, moreLinks[]{ label, url }, sideBySide,
       asset, crop, hotspot, ${IMG_META},
       "videoUrl": file.asset->url,
       poster{ asset, ${IMG_META} }
