@@ -16,6 +16,21 @@ const pieceFields = [
     type: 'string',
   }),
   defineField({ name: 'year', title: 'Año', type: 'number' }),
+  defineField({
+    name: 'description_en',
+    title: 'Descripción (EN)',
+    description: 'Opcional. Se lee al abrir la pieza en grande. Si una obra tiene varias imágenes, basta ponerla en la primera.',
+    type: 'text',
+    rows: 4,
+  }),
+  defineField({ name: 'description_es', title: 'Descripción (ES)', type: 'text', rows: 4 }),
+  defineField({ name: 'link', title: 'Enlace', description: 'Opcional. Sitio, video completo, fanzine...', type: 'url' }),
+  defineField({
+    name: 'linkLabel',
+    title: 'Texto del enlace',
+    description: 'Ej: Visit site, Watch video, Read zine. Por defecto: Visit.',
+    type: 'string',
+  }),
   defineField({ name: 'hidden', title: 'Ocultar del sitio', type: 'boolean', initialValue: false }),
 ]
 

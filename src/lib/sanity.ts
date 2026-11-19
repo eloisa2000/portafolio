@@ -87,7 +87,9 @@ export async function getEntry(type: Collection, slug: string) {
       gallery[]{ _type, _key, caption, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
       link, linkLabel,
       coverImage{ ..., ${IMG_META} },
-      credits[]{ role_en, role_es, names }
+      credits[]{ role_en, role_es, names },
+      screenings[]{ year, title, venue, city },
+      awards[]{ year, title, detail }
     }`,
     { type, slug }
   )
@@ -119,6 +121,7 @@ export async function getArtCategories() {
     "slug": slug.current,
     items[hidden != true]{
       _key, _type, title, details, year,
+      description_en, description_es, link, linkLabel,
       asset, crop, hotspot, ${IMG_META},
       "videoUrl": file.asset->url,
       poster{ asset, ${IMG_META} }

@@ -16,6 +16,11 @@ export interface WallItem {
   title?: string
   details?: string
   year?: number
+  /** texto que se lee en el visor, bajo la pieza */
+  description?: string
+  /** enlace externo (sitio, video completo, fanzine...) */
+  link?: string
+  linkLabel?: string
 }
 
 interface Props {
@@ -59,6 +64,9 @@ let shown = 0
           data-full={video ? item.videoUrl : fullUrl(item.image)}
           data-poster={video && item.poster?.asset ? posterUrl(item.poster) : undefined}
           data-caption={[item.title, meta].filter(Boolean).join(' — ') || undefined}
+          data-description={item.description || undefined}
+          data-link={item.link || undefined}
+          data-link-label={item.link ? item.linkLabel || 'Visit' : undefined}
         >
           {video ? (
             <span
@@ -108,7 +116,11 @@ let shown = 0
   </div>
   <div class="viewer-stage"></div>
   <div class="viewer-foot">
-    <p class="viewer-caption"></p>
+    <div class="viewer-text">
+      <p class="viewer-caption"></p>
+      <p class="viewer-description" hidden></p>
+      <a class="viewer-link" target="_blank" rel="noopener" hidden></a>
+    </div>
     <div class="viewer-nav">
       <button class="viewer-btn" type="button" data-action="prev" aria-label="Previous">←</button>
       <button class="viewer-btn" type="button" data-action="next" aria-label="Next">→</button>
@@ -201,6 +213,8 @@ let shown = 0
     gap: 1.5rem;
   }
 
+  .viewer-foot { align-items: flex-end; }
+
   .viewer-count { font-size: 1.25rem; color: var(--lila); }
 
   .viewer-caption {
@@ -208,6 +222,34 @@ let shown = 0
     line-height: 1.4;
     min-height: 1.4em;
   }
+
+  .viewer-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .viewer-description {
+    max-width: 68ch;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--lila);
+    /* textos largos: no le quitan más alto a la pieza */
+    max-height: 6.6em;
+    overflow-y: auto;
+  }
+
+  .viewer-link {
+    width: fit-content;
+    font-size: 1.0625rem;
+    color: var(--indigo);
+    border-bottom: 0.5px solid var(--indigo);
+  }
+
+  .viewer-link:hover { border-bottom-color: transparent; }
+
+  .viewer-link::after { content: ' ↗'; }
 
   .viewer-nav {
     display: flex;
@@ -335,6 +377,8 @@ let shown = 0
   const stage = viewer?.querySelector<HTMLElement>('.viewer-stage')
   const captionEl = viewer?.querySelector<HTMLElement>('.viewer-caption')
   const countEl = viewer?.querySelector<HTMLElement>('.viewer-count')
+  const descriptionEl = viewer?.querySelector<HTMLElement>('.viewer-description')
+  const linkEl = viewer?.querySelector<HTMLAnchorElement>('.viewer-link')
   let current = -1
 
   // Solo se recorren las piezas visibles con el filtro actual
@@ -365,6 +409,17 @@ let shown = 0
     }
 
     if (captionEl) captionEl.textContent = opener.dataset.caption ?? ''
+    if (descriptionEl) {
+      descriptionEl.textContent = opener.dataset.description ?? ''
+      descriptionEl.hidden = !opener.dataset.description
+      descriptionEl.scrollTop = 0
+    }
+    if (linkEl) {
+      linkEl.hidden = !opener.dataset.link
+      linkEl.textContent = opener.dataset.linkLabel ?? ''
+      if (opener.dataset.link) linkEl.href = opener.dataset.link
+      else linkEl.removeAttribute('href')
+    }
     if (countEl) countEl.textContent = `${current + 1} / ${list.length}`
   }
 

@@ -19,6 +19,11 @@ const solution = project.solution_en ?? project.solution_es
 const results = project.results_en ?? project.results_es
 const credits = (project.credits ?? []).filter((c: any) => c?.role_en || c?.role_es)
 
+// Muestras y reconocimientos, por año descendente (mismo formato que en About)
+const byYearDesc = (a: any, b: any) => (b.year ?? 0) - (a.year ?? 0)
+const screenings = (project.screenings ?? []).filter((s: any) => s?.title).sort(byYearDesc)
+const awards = (project.awards ?? []).filter((a: any) => a?.title).sort(byYearDesc)
+
 // Dos columnas (texto | resultados) solo si hay ambas cosas; si no, una sola.
 const twoCol = (context || solution) && results?.length > 0
 
@@ -163,6 +168,37 @@ let imageCount = 0
           )
         })}
       </div>
+    )}
+
+    <!-- Muestras y reconocimientos, editables desde el CMS -->
+    {screenings.length > 0 && (
+      <section class="project-rows">
+        <h2 class="meta-label">Screenings &amp; Exhibitions</h2>
+        <ul class="rows-list">
+          {screenings.map((s: any) => (
+            <li class="row">
+              <span class="row-year">{s.year}</span>
+              <span class="row-name">{s.title}</span>
+              <span class="row-place">{[s.venue, s.city].filter(Boolean).join(', ')}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {awards.length > 0 && (
+      <section class="project-rows">
+        <h2 class="meta-label">Awards</h2>
+        <ul class="rows-list">
+          {awards.map((a: any) => (
+            <li class="row">
+              <span class="row-year">{a.year}</span>
+              <span class="row-name">{a.title}</span>
+              <span class="row-place">{a.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     )}
 
     <!-- Créditos, editables desde el CMS -->
@@ -442,6 +478,58 @@ let imageCount = 0
     flex-direction: column;
     gap: 1.25rem;
     margin-bottom: 3.5rem;
+  }
+
+  /* MUESTRAS Y RECONOCIMIENTOS — mismas filas que Exhibitions en About */
+  .project-rows {
+    margin-bottom: 3.5rem;
+  }
+
+  .project-rows .meta-label {
+    display: block;
+    font-weight: 400;
+    padding-bottom: 0.75rem;
+    border-bottom: 0.5px solid var(--lila);
+  }
+
+  .rows-list {
+    list-style: none;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: baseline;
+    padding: 0.85rem 0;
+    border-bottom: 0.5px solid var(--lila);
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    color: var(--indigo);
+  }
+
+  .row-year {
+    color: var(--lila);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row-place {
+    color: var(--lila);
+    text-align: right;
+  }
+
+  @media (max-width: 700px) {
+    /* año a la izquierda; título y lugar apilados */
+    .row {
+      grid-template-columns: 3.25rem minmax(0, 1fr);
+      gap: 0.1rem 0.75rem;
+      font-size: 1rem;
+    }
+
+    .row-place {
+      grid-column: 2;
+      text-align: left;
+    }
   }
 
   .credits-grid {

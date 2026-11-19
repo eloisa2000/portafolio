@@ -17,13 +17,26 @@ const categories = (await getArtCategories())
   // una categoría sin piezas no se muestra
   .filter((cat: any) => cat.slug && cat.items.length > 0)
 
-const items: WallItem[] = categories.flatMap((cat: any) =>
-  cat.items.map((item: any) =>
-    item._type === 'artVideo'
-      ? { kind: 'video', groups: [cat.slug], videoUrl: item.videoUrl, poster: item.poster, title: item.title, details: item.details, year: item.year }
-      : { kind: 'image', groups: [cat.slug], image: item, title: item.title, details: item.details, year: item.year }
-  )
-)
+const items: WallItem[] = categories.flatMap((cat: any) => {
+  // Una obra puede tener varias piezas seguidas con el mismo título: la descripción
+  // y el enlace se escriben solo en la primera, y las demás los heredan en el visor.
+  let lead: any
+  return cat.items.map((item: any) => {
+    if (!item.title || item.title !== lead?.title || item.description_en || item.description_es || item.link) lead = item
+    const common = {
+      groups: [cat.slug],
+      title: item.title,
+      details: item.details,
+      year: item.year,
+      description: lead.description_en ?? lead.description_es,
+      link: lead.link,
+      linkLabel: lead.linkLabel,
+    }
+    return item._type === 'artVideo'
+      ? ({ kind: 'video', videoUrl: item.videoUrl, poster: item.poster, ...common } as WallItem)
+      : ({ kind: 'image', image: item, ...common } as WallItem)
+  })
+})
 
 // Al entrar se ve la primera categoría
 const first = categories[0]?.slug
