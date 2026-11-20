@@ -143,7 +143,7 @@ let imageCount = 0
         )}
         {project.agency && (
           <div class="meta-item">
-            <span class="meta-label">{T.agency}</span>
+            <span class="meta-label">{isWorkshop ? T.institution : T.agency}</span>
             <span class="meta-value">{project.agency}</span>
           </div>
         )}
@@ -197,7 +197,16 @@ let imageCount = 0
             <figure class={isNarrow ? 'gallery-item narrow' : 'gallery-item'}>
               {isVideo ? (
                 isMp4 ? (
-                  <video src={item.videoUrl} autoplay muted loop playsinline preload="metadata" aria-label={caption ?? `${title} — video`} />
+                  <button
+                    class="gallery-open"
+                    type="button"
+                    aria-label={`${T.open}: ${caption ?? `${title} — video`}`}
+                    data-kind="video"
+                    data-full={item.videoUrl}
+                    data-caption={caption}
+                  >
+                    <video src={item.videoUrl} autoplay muted loop playsinline preload="metadata" aria-label={caption ?? `${title} — video`} />
+                  </button>
                 ) : (
                   <iframe src={item.videoUrl} allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title={caption ?? 'Video'} />
                 )
@@ -629,7 +638,8 @@ let imageCount = 0
     cursor: zoom-out;
   }
 
-  .entry-viewer .viewer-stage :global(img) {
+  .entry-viewer .viewer-stage :global(img),
+  .entry-viewer .viewer-stage :global(video) {
     display: block;
     object-fit: contain;
     cursor: default;
@@ -1000,9 +1010,33 @@ let imageCount = 0
       const ratio = thumb.height > 0 ? thumb.width / thumb.height : 1
       const width = Math.min(box.width, box.height * ratio)
 
+      const full = opener.dataset.full ?? ''
+      const fit = (el: HTMLElement) => {
+        el.style.width = `${Math.round(width)}px`
+        el.style.height = `${Math.round(width / ratio)}px`
+      }
+
+      // el video de la página se detiene mientras se ve en grande
+      document.querySelectorAll<HTMLVideoElement>('.gallery-item video').forEach((v) => v.pause())
+
+      if (opener.dataset.kind === 'video') {
+        // en grande va con controles y sigue desde donde iba en la página
+        const inline = opener.querySelector('video')
+        const video = document.createElement('video')
+        video.src = full
+        video.controls = true
+        video.playsInline = true
+        video.loop = true
+        video.muted = true
+        video.autoplay = true
+        if (inline) video.currentTime = inline.currentTime
+        fit(video)
+        stage.append(video)
+        return
+      }
+
       const img = document.createElement('img')
       const small = opener.querySelector('img')
-      const full = opener.dataset.full ?? ''
       img.alt = small?.alt ?? ''
       if (small?.currentSrc && small.naturalWidth > 0) {
         // se ve de inmediato con la versión de la página y se cambia por la grande al cargar
@@ -1015,8 +1049,7 @@ let imageCount = 0
       } else {
         img.src = full
       }
-      img.style.width = `${Math.round(width)}px`
-      img.style.height = `${Math.round(width / ratio)}px`
+      fit(img)
       stage.append(img)
     }
 
@@ -1056,6 +1089,7 @@ let imageCount = 0
         viewer!.close()
         return
       }
+      if (media instanceof HTMLVideoElement) media.pause()
       // si se avanzó a otra imagen, la página se mueve para que vuelva a su lugar
       const r = opener.getBoundingClientRect()
       if (r.bottom < 0 || r.top > window.innerHeight) opener.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior })
@@ -1101,6 +1135,11 @@ let imageCount = 0
     viewer.addEventListener('close', () => {
       viewer.classList.remove('is-open')
       stage.replaceChildren()
+      // los videos de la página que están a la vista vuelven a andar
+      document.querySelectorAll<HTMLVideoElement>('.gallery-item video').forEach((v) => {
+        const r = v.getBoundingClientRect()
+        if (r.bottom > 0 && r.top < window.innerHeight) v.play().catch(() => {})
+      })
       const opener = openers[current]
       // la imagen queda visible aunque todavía no hubiera entrado con el scroll
       opener?.closest('.gallery-item')?.classList.add('in-view')
@@ -1115,7 +1154,7 @@ let imageCount = 0
       (entries) => {
         entries.forEach((entry) => {
           const video = entry.target as HTMLVideoElement
-          if (entry.isIntersecting) video.play().catch(() => {})
+          if (entry.isIntersecting && !document.querySelector<HTMLDialogElement>('.entry-viewer')?.open) video.play().catch(() => {})
           else video.pause()
         })
       },
