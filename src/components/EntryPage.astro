@@ -202,14 +202,22 @@ let imageCount = 0
                   <iframe src={item.videoUrl} allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title={caption ?? 'Video'} />
                 )
               ) : (
-                <Img
-                  image={item}
-                  alt={caption ?? `${title} — ${T.image} ${imageCount}`}
-                  widths={[640, 960, 1400, 2000]}
-                  sizes={isNarrow
-                    ? '(max-width: 700px) 100vw, (max-width: 1000px) 50vw, calc((100vw - 548px) / 2)'
-                    : '(max-width: 1000px) 100vw, calc(100vw - 524px)'}
-                />
+                <button
+                  class="gallery-open"
+                  type="button"
+                  aria-label={`${T.open}: ${caption ?? `${title} — ${T.image} ${imageCount}`}`}
+                  data-full={urlFor(item).width(2400).auto('format').quality(85).url()}
+                  data-caption={caption}
+                >
+                  <Img
+                    image={item}
+                    alt={caption ?? `${title} — ${T.image} ${imageCount}`}
+                    widths={[640, 960, 1400, 2000]}
+                    sizes={isNarrow
+                      ? '(max-width: 700px) 100vw, (max-width: 1000px) 50vw, calc((100vw - 548px) / 2)'
+                      : '(max-width: 1000px) 100vw, calc(100vw - 524px)'}
+                  />
+                </button>
               )}
               {caption && <figcaption>{caption}</figcaption>}
             </figure>
@@ -286,6 +294,22 @@ let imageCount = 0
     </nav>
 
   </article>
+
+  <!-- Visor: la imagen en grande -->
+  <dialog class="entry-viewer" aria-label={T.viewer} data-lenis-prevent>
+    <div class="viewer-bar">
+      <span class="viewer-count" aria-live="polite"></span>
+      <button class="viewer-btn" type="button" data-action="close">{T.close}</button>
+    </div>
+    <div class="viewer-stage"></div>
+    <div class="viewer-foot">
+      <p class="viewer-caption"></p>
+      <div class="viewer-nav">
+        <button class="viewer-btn" type="button" data-action="prev" aria-label={T.previous}>←</button>
+        <button class="viewer-btn" type="button" data-action="next" aria-label={T.next}>→</button>
+      </div>
+    </div>
+  </dialog>
 </Layout>
 
 <style>
@@ -479,6 +503,140 @@ let imageCount = 0
 
   .gallery-item.narrow video {
     aspect-ratio: auto 9 / 16;
+  }
+
+  /* la imagen es un botón que abre el visor */
+  .gallery-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+  }
+
+  .gallery-open:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  /* VISOR (mismo comportamiento que el de Art y Misc) */
+  .entry-viewer {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 1.25rem 2rem 1.5rem 1.75rem;
+    border: none;
+    background: transparent;
+    color: var(--indigo);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  .entry-viewer[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+  }
+
+  .entry-viewer::backdrop { background: transparent; }
+
+  /* El fondo es una capa aparte para poder fundirlo de 0 a 100 al abrir */
+  .entry-viewer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+    opacity: 0;
+    transition: opacity 0.42s ease;
+  }
+
+  .entry-viewer.is-open::before { opacity: 1; }
+
+  .entry-viewer .viewer-bar,
+  .entry-viewer .viewer-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .entry-viewer .viewer-foot { align-items: flex-end; }
+
+  .entry-viewer.is-open .viewer-bar,
+  .entry-viewer.is-open .viewer-foot {
+    opacity: 1;
+    transition-delay: 0.14s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entry-viewer::before,
+    .entry-viewer .viewer-bar,
+    .entry-viewer .viewer-foot { transition: none; }
+  }
+
+  .entry-viewer .viewer-count { font-size: 1.25rem; color: var(--lila); }
+
+  .entry-viewer .viewer-caption {
+    font-size: 1.0625rem;
+    line-height: 1.4;
+    min-height: 1.4em;
+  }
+
+  .entry-viewer .viewer-nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-left: auto;
+  }
+
+  .entry-viewer .viewer-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 1.25rem;
+    color: var(--indigo);
+    padding: 0;
+    line-height: 1.1;
+  }
+
+  .entry-viewer .viewer-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 0px;
+    text-decoration-thickness: 0.12em;
+    text-decoration-skip-ink: none;
+  }
+
+  .entry-viewer .viewer-btn:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+
+  .entry-viewer .viewer-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    cursor: zoom-out;
+  }
+
+  .entry-viewer .viewer-stage :global(img) {
+    display: block;
+    object-fit: contain;
+    cursor: default;
+  }
+
+  @media (max-width: 1000px) {
+    .entry-viewer { padding: 1.1rem var(--gutter) 1.25rem; }
   }
 
   .gallery-item figcaption {
@@ -792,6 +950,143 @@ let imageCount = 0
     document.querySelectorAll('.entry-around').forEach((group) => {
       group.classList.add('reveal')
       group.querySelectorAll('.entry-sib').forEach((sib) => sibObserver.observe(sib))
+    })
+  }
+
+  // ── Visor: la imagen viaja entre su lugar en la página y el centro ──
+  const viewer = document.querySelector<HTMLDialogElement>('.entry-viewer')
+  const openers = Array.from(document.querySelectorAll<HTMLButtonElement>('.gallery-open'))
+
+  if (viewer && openers.length > 0) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const stage = viewer.querySelector<HTMLElement>('.viewer-stage')!
+    const captionEl = viewer.querySelector<HTMLElement>('.viewer-caption')!
+    const countEl = viewer.querySelector<HTMLElement>('.viewer-count')!
+    const navEl = viewer.querySelector<HTMLElement>('.viewer-nav')!
+    const EASE = 'cubic-bezier(0.2, 0.7, 0.2, 1)'
+    let current = -1
+    let closing: number | undefined
+
+    navEl.hidden = openers.length < 2
+
+    function show(index: number) {
+      current = (index + openers.length) % openers.length
+      const opener = openers[current]
+      captionEl.textContent = opener.dataset.caption ?? ''
+      countEl.textContent = openers.length > 1 ? `${current + 1} / ${openers.length}` : ''
+
+      // lo más grande que cabe en el escenario con la proporción de la imagen
+      stage.replaceChildren()
+      const thumb = opener.getBoundingClientRect()
+      const box = stage.getBoundingClientRect()
+      const ratio = thumb.height > 0 ? thumb.width / thumb.height : 1
+      const width = Math.min(box.width, box.height * ratio)
+
+      const img = document.createElement('img')
+      const small = opener.querySelector('img')
+      const full = opener.dataset.full ?? ''
+      img.alt = small?.alt ?? ''
+      if (small?.currentSrc && small.naturalWidth > 0) {
+        // se ve de inmediato con la versión de la página y se cambia por la grande al cargar
+        img.src = small.currentSrc
+        const big = new Image()
+        big.onload = () => {
+          if (img.isConnected) img.src = full
+        }
+        big.src = full
+      } else {
+        img.src = full
+      }
+      img.style.width = `${Math.round(width)}px`
+      img.style.height = `${Math.round(width / ratio)}px`
+      stage.append(img)
+    }
+
+    // transform que lleva la imagen del visor a calzar sobre la de la página
+    function toThumb(media: HTMLElement, opener: HTMLElement) {
+      const from = opener.getBoundingClientRect()
+      const to = media.getBoundingClientRect()
+      if (to.width === 0 || to.height === 0) return 'none'
+      return `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`
+    }
+
+    function openViewer(opener: HTMLButtonElement) {
+      window.clearTimeout(closing)
+      viewer!.showModal()
+      show(openers.indexOf(opener))
+      const media = stage.firstElementChild as HTMLElement | null
+      if (media && !reduceMotion) {
+        media.animate(
+          [
+            { transformOrigin: 'top left', transform: toThumb(media, opener) },
+            { transformOrigin: 'top left', transform: 'none' },
+          ],
+          { duration: 420, easing: EASE }
+        )
+      }
+      // fuerza un reflow para que el fundido del fondo parta desde 0
+      void viewer!.offsetWidth
+      viewer!.classList.add('is-open')
+    }
+
+    function closeViewer() {
+      if (!viewer!.open) return
+      const opener = openers[current]
+      const media = stage.firstElementChild as HTMLElement | null
+      viewer!.classList.remove('is-open')
+      if (reduceMotion || !media || !opener) {
+        viewer!.close()
+        return
+      }
+      // si se avanzó a otra imagen, la página se mueve para que vuelva a su lugar
+      const r = opener.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > window.innerHeight) opener.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior })
+      media.animate(
+        [
+          { transformOrigin: 'top left', transform: 'none' },
+          { transformOrigin: 'top left', transform: toThumb(media, opener) },
+        ],
+        { duration: 260, easing: EASE, fill: 'forwards' }
+      )
+      window.clearTimeout(closing)
+      closing = window.setTimeout(() => viewer!.close(), 260)
+    }
+
+    openers.forEach((opener) => opener.addEventListener('click', () => openViewer(opener)))
+
+    // Esc cierra con la misma animación
+    viewer.addEventListener('cancel', (event) => {
+      event.preventDefault()
+      closeViewer()
+    })
+
+    window.addEventListener('resize', () => {
+      if (viewer.open) show(current)
+    })
+
+    viewer.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement
+      const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+      if (action === 'close') closeViewer()
+      else if (action === 'prev') show(current - 1)
+      else if (action === 'next') show(current + 1)
+      // click en el espacio vacío alrededor de la imagen: cierra
+      else if (target === stage) closeViewer()
+    })
+
+    viewer.addEventListener('keydown', (event) => {
+      if (openers.length < 2) return
+      if (event.key === 'ArrowLeft') show(current - 1)
+      if (event.key === 'ArrowRight') show(current + 1)
+    })
+
+    viewer.addEventListener('close', () => {
+      viewer.classList.remove('is-open')
+      stage.replaceChildren()
+      const opener = openers[current]
+      // la imagen queda visible aunque todavía no hubiera entrado con el scroll
+      opener?.closest('.gallery-item')?.classList.add('in-view')
+      opener?.focus({ preventScroll: true })
     })
   }
 
