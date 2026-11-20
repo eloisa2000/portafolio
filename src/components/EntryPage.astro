@@ -2,7 +2,7 @@
 // Página individual de un proyecto (Work) o de un workshop: misma estructura para ambos.
 import Layout from '../layouts/Layout.astro'
 import Img from './Img.astro'
-import { urlFor } from '../lib/sanity'
+import { getProjects, getWorkshops, slugOf, urlFor } from '../lib/sanity'
 import { fmtRole, excerpt } from '../lib/labels'
 import { fmtLinkLabel, fmtSector, href, langOf, loc, slugFor, ui } from '../lib/i18n'
 
@@ -44,6 +44,25 @@ const back = isWorkshop
 const base = isWorkshop ? '/workshops' : '/work'
 const altHref = href(`${base}/${slugFor(project, other)}`, other)
 
+// Proyecto anterior y siguiente, en el mismo orden de la grilla (da la vuelta en los extremos)
+const siblings = (await (isWorkshop ? getWorkshops() : getProjects())).filter(slugOf)
+const here = siblings.findIndex((s: any) => s._id === project._id)
+const pick = (step: number) =>
+  here < 0 || siblings.length < 2 ? undefined : siblings[(here + step + siblings.length) % siblings.length]
+const around = [
+  { dir: 'prev', label: `← ${T.previous}`, entry: pick(-1) },
+  { dir: 'next', label: `${T.next} →`, entry: pick(1) },
+]
+  .filter((s) => s.entry)
+  .map((s) => ({
+    ...s,
+    title: loc(s.entry, 'title', lang),
+    href: href(`${base}/${slugFor(s.entry, lang)}`, lang),
+    thumb: s.entry.coverImage?.asset
+      ? urlFor(s.entry.coverImage).width(264).height(165).fit('crop').auto('format').url()
+      : undefined,
+  }))
+
 // ── SEO ────────────────────────────────────────────────────
 const description =
   excerpt(context ?? solution) ||
@@ -66,6 +85,24 @@ let imageCount = 0
 ---
 
 <Layout title={`${title} — Eloísa Nieto`} description={description} image={shareImage} type="article" jsonLd={jsonLd} section={section} headline={loc(project, 'headline', lang)} altHref={altHref}>
+  <!-- Navegación entre proyectos: en desktop va en la columna izquierda -->
+  <nav slot="sidebar" class="entry-nav in-sidebar" aria-label={T.backTo + ' ' + back.label}>
+    <a class="entry-back" href={back.href} data-grid-back>← {T.backTo} {back.label}</a>
+    {around.length > 0 && (
+      <div class="entry-around">
+        {around.map((s) => (
+          <a class="entry-sib" href={s.href} rel={s.dir}>
+            {s.thumb && <img src={s.thumb} alt="" width="132" height="82" loading="lazy" decoding="async" />}
+            <span class="sib-text">
+              <span class="sib-dir">{s.label}</span>
+              <span class="sib-title">{s.title}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    )}
+  </nav>
+
   <article class="project">
 
     <!-- Portada a ancho completo (hero) -->
@@ -230,9 +267,23 @@ let imageCount = 0
     )}
 
     <!-- Volver -->
-    <div class="project-nav">
-      <a href={back.href}>← {T.backTo} {back.label}</a>
-    </div>
+    <!-- En móvil la misma navegación va al final de la página -->
+    <nav class="entry-nav at-end" aria-label={T.backTo + ' ' + back.label}>
+      <a class="entry-back" href={back.href} data-grid-back>← {T.backTo} {back.label}</a>
+      {around.length > 0 && (
+        <div class="entry-around">
+          {around.map((s) => (
+            <a class="entry-sib" href={s.href} rel={s.dir}>
+              {s.thumb && <img src={s.thumb} alt="" width="132" height="82" loading="lazy" decoding="async" />}
+              <span class="sib-text">
+                <span class="sib-dir">{s.label}</span>
+                <span class="sib-title">{s.title}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
+    </nav>
 
   </article>
 </Layout>
@@ -418,6 +469,18 @@ let imageCount = 0
     aspect-ratio: 9 / 16;
   }
 
+  /* Los videos propios toman su proporción real apenas cargan (16:9 o 9:16 es solo
+     la reserva de espacio inicial), así nunca quedan con franjas negras. */
+  .gallery-item video {
+    aspect-ratio: auto 16 / 9;
+    height: auto;
+    background: color-mix(in srgb, var(--lila) 14%, transparent);
+  }
+
+  .gallery-item.narrow video {
+    aspect-ratio: auto 9 / 16;
+  }
+
   .gallery-item figcaption {
     font-size: 0.875rem;
     color: var(--lila);
@@ -568,19 +631,92 @@ let imageCount = 0
     line-height: 1.4;
   }
 
-  /* VOLVER */
-  .project-nav {
-    padding-top: 1.75rem;
-    border-top: 0.5px solid var(--lila);
+  /* NAVEGACIÓN: volver + anterior / siguiente */
+  .entry-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 
-  .project-nav a {
+  .entry-back {
     font-size: 1rem;
     color: var(--lila);
+    align-self: flex-start;
+    transition: color 0.2s ease;
   }
 
-  .project-nav a:hover {
+  .entry-back:hover { color: var(--indigo); }
+
+  .entry-around {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .entry-sib {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    color: var(--lila);
+    transition: color 0.2s ease;
+  }
+
+  .entry-sib img {
+    width: 88px;
+    height: 55px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--lila) 18%, transparent);
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+  }
+
+  .sib-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .sib-dir { font-size: 0.8125rem; }
+
+  .sib-title {
+    font-size: 1rem;
     color: var(--indigo);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .entry-sib:hover { color: var(--indigo); }
+  .entry-sib:hover img { opacity: 1; }
+
+  /* en desktop solo se ve la de la columna izquierda */
+  .entry-nav.at-end { display: none; }
+
+  @media (max-width: 1000px) {
+    .entry-nav.in-sidebar { display: none; }
+    .entry-nav.at-end {
+      display: flex;
+      padding-top: 1.75rem;
+      border-top: 0.5px solid var(--lila);
+    }
+    .entry-nav.at-end .entry-around {
+      flex-direction: row;
+      gap: 1rem;
+    }
+    .entry-nav.at-end .entry-sib {
+      flex: 1 1 0;
+      min-width: 0;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .entry-nav.at-end .entry-sib img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 8 / 5;
+    }
+    .entry-nav.at-end .entry-sib[rel='next'] { text-align: right; align-items: flex-end; }
   }
 
   @media (max-width: 1000px) {
@@ -593,6 +729,15 @@ let imageCount = 0
 </style>
 
 <script>
+  // "Volver": avisa a la grilla que debe restaurar el punto donde se quedó
+  document.querySelectorAll<HTMLAnchorElement>('[data-grid-back]').forEach((a) => {
+    a.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('grid:restore', new URL(a.href).pathname.replace(/\/+$/, '') || '/')
+      } catch (e) {}
+    })
+  })
+
   const gallery = document.querySelector('.project-gallery')
 
   if (gallery && 'IntersectionObserver' in window) {

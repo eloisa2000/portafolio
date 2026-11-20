@@ -396,8 +396,42 @@ const shareImage = projects[0]?.coverImage
     })
   })
 
+  // ── Volver a donde se quedó ───────────────────────────────
+  // Al salir se guarda la posición y los filtros; se restauran solo si se
+  // vuelve con el enlace "Volver" de un proyecto (no al entrar desde el menú).
+  const here = location.pathname.replace(/\/+$/, '') || '/'
+  const stateKey = 'grid:' + here
+  const saveState = () => {
+    try {
+      sessionStorage.setItem(stateKey, JSON.stringify({ y: window.scrollY, role: activeRole, sector: activeSector }))
+    } catch (e) {}
+  }
+  window.addEventListener('pagehide', saveState)
+  cards.forEach((card) => card.addEventListener('click', saveState, true))
+
+  let restored = false
+  try {
+    if (sessionStorage.getItem('grid:restore') === here) {
+      sessionStorage.removeItem('grid:restore')
+      const saved = JSON.parse(sessionStorage.getItem(stateKey) ?? 'null')
+      if (saved) {
+        activeRole = saved.role ?? 'all'
+        activeSector = saved.sector ?? 'all'
+        updateActiveButtons()
+        applyFilters()
+        // sin animación de entrada: se vuelve a una página que ya se había visto
+        cards.forEach((card) => card.classList.add('in-view'))
+        const go = () => window.scrollTo({ top: saved.y ?? 0, behavior: 'instant' as ScrollBehavior })
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+        go()
+        window.addEventListener('load', go, { once: true })
+        restored = true
+      }
+    }
+  } catch (e) {}
+
   // ── Entrada al scrollear ──────────────────────────────────
-  if ('IntersectionObserver' in window) {
+  if (!restored && 'IntersectionObserver' in window) {
     const revealObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
