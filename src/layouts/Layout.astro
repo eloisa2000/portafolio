@@ -126,6 +126,8 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="author" content={name} />
+    {/* About en inglés: los títulos de exposiciones van en español y el navegador cree que la página está en otro idioma y ofrece traducirla */}
+    {activeSection === 'about' && lang === 'en' && <meta name="google" content="notranslate" />}
     {canonical && <link rel="canonical" href={canonical} />}
     {Astro.site && <link rel="alternate" hreflang={lang} href={new URL(Astro.url.pathname, Astro.site).href} />}
     {Astro.site && <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />}
