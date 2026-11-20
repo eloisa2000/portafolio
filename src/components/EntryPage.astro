@@ -509,8 +509,25 @@ let imageCount = 0
     transform: translateY(0);
   }
 
+  /* Anterior / Siguiente entran igual que las imágenes de la galería */
+  .entry-around.reveal .entry-sib {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease, color 0.2s ease;
+  }
+
+  .entry-around.reveal .entry-sib + .entry-sib {
+    transition-delay: 0.12s, 0.12s, 0s;
+  }
+
+  .entry-around.reveal .entry-sib.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .project-gallery.reveal .gallery-item {
+    .project-gallery.reveal .gallery-item,
+    .entry-around.reveal .entry-sib {
       opacity: 1;
       transform: none;
       transition: none;
@@ -757,6 +774,25 @@ let imageCount = 0
     )
 
     gallery.querySelectorAll('.gallery-item').forEach((item) => observer.observe(item))
+  }
+
+  // Anterior / Siguiente: misma entrada que las imágenes
+  if ('IntersectionObserver' in window) {
+    const sibObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view')
+            sibObserver.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.12 }
+    )
+    document.querySelectorAll('.entry-around').forEach((group) => {
+      group.classList.add('reveal')
+      group.querySelectorAll('.entry-sib').forEach((sib) => sibObserver.observe(sib))
+    })
   }
 
   // Los videos solo se reproducen mientras están en pantalla
