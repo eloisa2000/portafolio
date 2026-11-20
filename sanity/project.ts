@@ -313,7 +313,8 @@ export default defineType({
           type: 'image',
           options: { hotspot: true },
           fields: [
-            defineField({ name: 'caption', title: 'Caption', type: 'string' }),
+            defineField({ name: 'caption', title: 'Descripción (EN)', description: 'Opcional. Es la que se ve en la versión en inglés.', type: 'string' }),
+            defineField({ name: 'caption_es', title: 'Descripción (ES)', description: 'Opcional. Para la versión en español; si queda vacía se usa la de arriba.', type: 'string' }),
             defineField({
               name: 'halfWidth',
               title: 'Media columna',
@@ -336,11 +337,8 @@ export default defineType({
               validation: (Rule) =>
                 Rule.required().uri({ scheme: ['http', 'https'], allowRelative: true }),
             }),
-            defineField({
-              name: 'caption',
-              title: 'Caption',
-              type: 'string',
-            }),
+            defineField({ name: 'caption', title: 'Descripción (EN)', description: 'Opcional. Es la que se ve en la versión en inglés.', type: 'string' }),
+            defineField({ name: 'caption_es', title: 'Descripción (ES)', description: 'Opcional. Para la versión en español; si queda vacía se usa la de arriba.', type: 'string' }),
             defineField({
               name: 'isPortrait',
               title: '¿Formato vertical? (portrait)',

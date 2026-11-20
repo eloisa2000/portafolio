@@ -79,7 +79,8 @@ export default defineType({
           type: 'image',
           options: { hotspot: true },
           fields: [
-            defineField({ name: 'caption', title: 'Pie de foto', type: 'string' }),
+            defineField({ name: 'caption', title: 'Descripción (EN)', description: 'Opcional. Es la que se ve en la versión en inglés.', type: 'string' }),
+            defineField({ name: 'caption_es', title: 'Descripción (ES)', description: 'Opcional. Para la versión en español; si queda vacía se usa la de arriba.', type: 'string' }),
             defineField({ name: 'halfWidth', title: 'Media fila (para imágenes verticales)', type: 'boolean', initialValue: false }),
             defineField({ name: 'showInPreview', title: 'Mostrar en la miniatura (hover)', type: 'boolean', initialValue: false }),
           ],
@@ -90,7 +91,8 @@ export default defineType({
           type: 'object',
           fields: [
             defineField({ name: 'videoUrl', title: 'URL del video', description: 'Archivo .mp4 o enlace de Vimeo/YouTube para incrustar.', type: 'string' }),
-            defineField({ name: 'caption', title: 'Pie de video', type: 'string' }),
+            defineField({ name: 'caption', title: 'Descripción (EN)', description: 'Opcional. Es la que se ve en la versión en inglés.', type: 'string' }),
+            defineField({ name: 'caption_es', title: 'Descripción (ES)', description: 'Opcional. Para la versión en español; si queda vacía se usa la de arriba.', type: 'string' }),
             defineField({ name: 'isPortrait', title: 'Vertical (media fila)', type: 'boolean', initialValue: false }),
           ],
           preview: { select: { title: 'caption', subtitle: 'videoUrl' } },

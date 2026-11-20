@@ -12,13 +12,15 @@ const T = ui[lang]
 
 const misc = await getMisc()
 
+const cap = (item: any) => (lang === "es" ? item.caption_es || item.caption : item.caption || item.caption_es)
+
 const items: WallItem[] = (misc?.items ?? [])
   // descarta lo que quedó sin archivo subido en Sanity
   .filter((item: any) => (item._type === 'miscVideo' ? item.videoUrl : item.asset))
   .map((item: any) =>
     item._type === 'miscVideo'
-      ? { kind: 'video', groups: ['video'], videoUrl: item.videoUrl, poster: item.poster, title: item.caption, year: item.year }
-      : { kind: 'image', groups: ['image'], image: item, title: item.caption, year: item.year }
+      ? { kind: 'video', groups: ['video'], videoUrl: item.videoUrl, poster: item.poster, title: cap(item), year: item.year }
+      : { kind: 'image', groups: ['image'], image: item, title: cap(item), year: item.year }
   )
 
 const hasImages = items.some((item) => item.kind === 'image')

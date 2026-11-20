@@ -88,7 +88,7 @@ export async function getEntry(type: Collection, slug: string) {
       year, agency, role, sector, tags,
       contextAndChallenge_en, solution_en, results_en,
       contextAndChallenge_es, solution_es, results_es,
-      gallery[]{ _type, _key, caption, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
+      gallery[]{ _type, _key, caption, caption_es, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
       link, linkLabel,
       coverImage{ ..., ${IMG_META} },
       credits[]{ role_en, role_es, names },
@@ -109,7 +109,7 @@ export async function getMisc() {
   return client.fetch(`*[_type == "misc"][0]{
     intro_en, intro_es,
     items[hidden != true]{
-      _key, _type, caption, year,
+      _key, _type, caption, caption_es, year,
       asset, crop, hotspot, ${IMG_META},
       "videoUrl": file.asset->url,
       poster{ asset, ${IMG_META} }

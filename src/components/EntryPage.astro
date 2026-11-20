@@ -151,6 +151,7 @@ let imageCount = 0
     {gallery.length > 0 && (
       <div class="project-gallery">
         {gallery.map((item: any) => {
+          const caption = lang === 'es' ? item.caption_es || item.caption : item.caption || item.caption_es
           const isVideo = item._type === 'galleryVideo' || item?.videoUrl
           const isNarrow = isVideo ? item.isPortrait : item.halfWidth
           const isMp4 = isVideo && /\.(mp4|webm|ogg)(\?.*)?$/i.test(item.videoUrl ?? '')
@@ -159,21 +160,21 @@ let imageCount = 0
             <figure class={isNarrow ? 'gallery-item narrow' : 'gallery-item'}>
               {isVideo ? (
                 isMp4 ? (
-                  <video src={item.videoUrl} autoplay muted loop playsinline preload="metadata" aria-label={item.caption ?? `${title} — video`} />
+                  <video src={item.videoUrl} autoplay muted loop playsinline preload="metadata" aria-label={caption ?? `${title} — video`} />
                 ) : (
-                  <iframe src={item.videoUrl} allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title={item.caption ?? 'Video'} />
+                  <iframe src={item.videoUrl} allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" title={caption ?? 'Video'} />
                 )
               ) : (
                 <Img
                   image={item}
-                  alt={item.caption ?? `${title} — ${T.image} ${imageCount}`}
+                  alt={caption ?? `${title} — ${T.image} ${imageCount}`}
                   widths={[640, 960, 1400, 2000]}
                   sizes={isNarrow
                     ? '(max-width: 700px) 100vw, (max-width: 1000px) 50vw, calc((100vw - 548px) / 2)'
                     : '(max-width: 1000px) 100vw, calc(100vw - 524px)'}
                 />
               )}
-              {item.caption && <figcaption>{item.caption}</figcaption>}
+              {caption && <figcaption>{caption}</figcaption>}
             </figure>
           )
         })}
