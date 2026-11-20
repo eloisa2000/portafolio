@@ -92,7 +92,7 @@ let imageCount = 0
       <div class="entry-around">
         {around.map((s) => (
           <a class="entry-sib" href={s.href} rel={s.dir}>
-            {s.thumb && <img src={s.thumb} alt="" width="132" height="82" loading="lazy" decoding="async" />}
+            {s.thumb && <img src={s.thumb} alt="" width="132" height="82" decoding="async" />}
             <span class="sib-text">
               <span class="sib-dir">{s.label}</span>
               <span class="sib-title">{s.title}</span>
@@ -667,20 +667,36 @@ let imageCount = 0
     transform: translateY(0);
   }
 
-  /* Anterior / Siguiente entran igual que las imágenes de la galería */
+  /* Anterior / Siguiente entran igual que las imágenes de la galería.
+     En la columna izquierda ya están a la vista al cargar, así que la entrada es
+     una animación CSS que parte desde el primer pintado (sin esperar al JS). */
+  @keyframes sib-in {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry-nav.in-sidebar .entry-sib {
+    animation: sib-in 0.7s ease 0.2s both;
+  }
+
+  .entry-nav.in-sidebar .entry-sib + .entry-sib {
+    animation-delay: 0.32s;
+  }
+
+  /* Al final de la página (móvil) entran al llegar con el scroll */
   .entry-around.reveal .entry-sib {
     opacity: 0;
     transform: translateY(28px);
-    transition: opacity 0.7s ease, transform 0.7s ease, color 0.2s ease;
-  }
-
-  .entry-around.reveal .entry-sib + .entry-sib {
-    transition-delay: 0.12s, 0.12s, 0s;
   }
 
   .entry-around.reveal .entry-sib.in-view {
     opacity: 1;
     transform: translateY(0);
+    transition: opacity 0.7s ease, transform 0.7s ease, color 0.2s ease;
+  }
+
+  .entry-around.reveal .entry-sib + .entry-sib.in-view {
+    transition-delay: 0.12s, 0.12s, 0s;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -690,6 +706,7 @@ let imageCount = 0
       transform: none;
       transition: none;
     }
+    .entry-nav.in-sidebar .entry-sib { animation: none; }
   }
 
   /* RESULTADOS — cierre liviano */
@@ -934,7 +951,8 @@ let imageCount = 0
     gallery.querySelectorAll('.gallery-item').forEach((item) => observer.observe(item))
   }
 
-  // Anterior / Siguiente: misma entrada que las imágenes
+  // Anterior / Siguiente al final de la página (móvil): misma entrada que las imágenes.
+  // Los de la columna izquierda se animan solo con CSS.
   if ('IntersectionObserver' in window) {
     const sibObserver = new IntersectionObserver(
       (entries) => {
@@ -947,7 +965,7 @@ let imageCount = 0
       },
       { threshold: 0.12 }
     )
-    document.querySelectorAll('.entry-around').forEach((group) => {
+    document.querySelectorAll('.entry-nav.at-end .entry-around').forEach((group) => {
       group.classList.add('reveal')
       group.querySelectorAll('.entry-sib').forEach((sib) => sibObserver.observe(sib))
     })
