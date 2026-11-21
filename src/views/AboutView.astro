@@ -2,7 +2,7 @@
 // src/pages/about.astro
 import Layout from '../layouts/Layout.astro'
 import Img from '../components/Img.astro'
-import { getProfile, getEntryScreenings } from '../lib/sanity'
+import { getProfile } from '../lib/sanity'
 import { excerpt } from '../lib/labels'
 import { langOf, loc, ui } from '../lib/i18n'
 
@@ -25,14 +25,9 @@ const likes = (loc(profile, 'likes', lang) ?? []).filter((l: string) => l && l.t
 // Las dos imágenes del final (pueden ser 0, 1 o 2 según lo que cargues en Sanity)
 const aboutImages = (profile?.aboutImages ?? []).filter((img: any) => img?.asset)
 
-// Exhibitions & Screenings: las del perfil más las anotadas en cada proyecto,
-// sin repetir (mismo año y título), ordenadas por año descendente
-const exhibitionKey = (e: any) => `${e.year ?? ''}|${String(e.title).trim().toLowerCase()}`
-const seenExhibitions = new Set<string>()
-const exhibitions = [...(profile?.exhibitions ?? []), ...((await getEntryScreenings()) ?? [])]
-  .filter((e: any) => e?.title)
-  .filter((e: any) => !seenExhibitions.has(exhibitionKey(e)) && seenExhibitions.add(exhibitionKey(e)))
-  .sort((a: any, b: any) => (b.year ?? 0) - (a.year ?? 0))
+// Exhibitions & Screenings: solo las del perfil, en el orden en que están en Sanity.
+// Las proyecciones de un proyecto (p. ej. Glorp Corp) se muestran solo en su página.
+const exhibitions = (profile?.exhibitions ?? []).filter((e: any) => e?.title)
 
 const description = excerpt(paragraphs.join(' ')) || undefined
 ---

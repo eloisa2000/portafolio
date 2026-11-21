@@ -28,7 +28,7 @@ const T = ui[lang]
 // Etiquetas de cada tarjeta: los workshops usan tags; los proyectos, role
 const tagsOf = (p: any): string[] => (section === 'workshops' ? p.tags : p.role) ?? []
 
-const roleOrder = ['web-design', 'ui-design', 'brand-identity', 'graphic-design', 'art-direction', 'motion-design', 'development', 'video-and-cinema', 'design']
+const roleOrder = ['web-design', 'ui-design', 'brand-identity', 'graphic-design', 'art-direction', 'motion-design', 'development', 'video-and-cinema', 'design', 'drawing']
 const sectorOrder = ['Arts & Culture', 'Social Impact', 'Education', 'Health', 'B2B', 'Industry', 'Tech', 'E-Commerce']
 // "workshops" no es un filtro: tiene su propia página
 const rolesInUse = new Set(projects.flatMap(tagsOf).filter((r: string) => section === 'workshops' || r !== WORKSHOP_ROLE))

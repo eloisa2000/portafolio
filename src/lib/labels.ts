@@ -17,6 +17,7 @@ const roleLabels: Record<string, string> = {
   // tags de la colección Workshops
   'video-and-cinema': 'Video and Cinema',
   'design': 'Design',
+  'drawing': 'Drawing',
 }
 
 const roleLabelsEs: Record<string, string> = {
@@ -36,6 +37,7 @@ const roleLabelsEs: Record<string, string> = {
   'workshops': 'Talleres',
   'video-and-cinema': 'Video y cine',
   'design': 'Diseño',
+  'drawing': 'Dibujo',
 }
 
 export function fmtRole(val: string, lang: 'en' | 'es' = 'en') {

@@ -44,6 +44,7 @@ export default defineType({
         list: [
           { title: 'Video and Cinema', value: 'video-and-cinema' },
           { title: 'Design', value: 'design' },
+          { title: 'Drawing', value: 'drawing' },
         ],
       },
     }),

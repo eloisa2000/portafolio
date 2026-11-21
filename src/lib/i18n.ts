@@ -46,9 +46,9 @@ export const ui = {
     switchLabel: 'Ver en español',
     homeTitle: 'Web & UI Designer in Santiago, Chile',
     siteDescription: (name: string) =>
-      `${name} is a web and UI designer based in Santiago, Chile, seeking beauty and functionality in the digital world. Web design, brand identity and art direction.`,
+      `${name} is a web and UI designer based in Santiago, Chile, seeking the visual and the functional in digital spaces. Web design, brand identity and art direction.`,
     jobTitle: 'Web & UI Designer',
-    defaultHeadline: 'seeking *beauty* and *functionality* in the digital world',
+    defaultHeadline: 'seeking the *visual* and the *functional* in digital spaces',
     selectedWork: 'Selected work',
     workshopsDescription: 'Workshops by Eloísa Nieto on design, video and cinema.',
     all: 'All',
@@ -105,9 +105,9 @@ export const ui = {
     switchLabel: 'View in English',
     homeTitle: 'Diseñadora web y UI en Santiago, Chile',
     siteDescription: (name: string) =>
-      `${name} es diseñadora web y UI en Santiago, Chile, y busca belleza y funcionalidad en el mundo digital. Diseño web, identidad de marca y dirección de arte.`,
+      `${name} es diseñadora web y UI en Santiago, Chile, y busca lo visual y lo funcional en los medios digitales. Diseño web, identidad de marca y dirección de arte.`,
     jobTitle: 'Diseñadora web y UI',
-    defaultHeadline: 'buscando *belleza* y *funcionalidad* en el mundo digital',
+    defaultHeadline: 'buscando lo *visual* y lo *funcional* en los medios digitales',
     selectedWork: 'Trabajos seleccionados',
     workshopsDescription: 'Talleres de Eloísa Nieto sobre diseño, video y cine.',
     all: 'Todos',
