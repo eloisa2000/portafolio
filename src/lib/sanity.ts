@@ -66,7 +66,10 @@ const CARD_FIELDS = `
 
 function getCollection(type: Collection) {
   return client.fetch(
-    `*[_type == $type && published != false] | order(featured desc, order asc, year desc) { ${CARD_FIELDS} }`,
+    // Los workshops van por fecha, del más reciente al más antiguo; los proyectos, por orden manual
+    type === 'workshop'
+      ? `*[_type == $type && published != false] | order(year desc, order asc) { ${CARD_FIELDS} }`
+      : `*[_type == $type && published != false] | order(featured desc, order asc, year desc) { ${CARD_FIELDS} }`,
     { type }
   )
 }
