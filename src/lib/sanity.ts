@@ -31,6 +31,13 @@ export async function getProfile() {
   }`)
 }
 
+/** Muestras y proyecciones anotadas en los proyectos y workshops publicados (para About) */
+export async function getEntryScreenings() {
+  return client.fetch(
+    `*[_type in ["project", "workshop"] && published != false].screenings[defined(title)]{ year, title, venue, city }`
+  )
+}
+
 // ── Work y Workshops ───────────────────────────────────────
 // Son dos colecciones distintas en Sanity ("project" y "workshop") con la misma
 // estructura. La diferencia: los proyectos se etiquetan con role + sector,

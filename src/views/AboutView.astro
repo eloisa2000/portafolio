@@ -2,7 +2,7 @@
 // src/pages/about.astro
 import Layout from '../layouts/Layout.astro'
 import Img from '../components/Img.astro'
-import { getProfile } from '../lib/sanity'
+import { getProfile, getEntryScreenings } from '../lib/sanity'
 import { excerpt } from '../lib/labels'
 import { langOf, loc, ui } from '../lib/i18n'
 
@@ -25,9 +25,13 @@ const likes = (loc(profile, 'likes', lang) ?? []).filter((l: string) => l && l.t
 // Las dos imágenes del final (pueden ser 0, 1 o 2 según lo que cargues en Sanity)
 const aboutImages = (profile?.aboutImages ?? []).filter((img: any) => img?.asset)
 
-// Exhibitions & Screenings, ordenadas por año descendente
-const exhibitions = (profile?.exhibitions ?? [])
+// Exhibitions & Screenings: las del perfil más las anotadas en cada proyecto,
+// sin repetir (mismo año y título), ordenadas por año descendente
+const exhibitionKey = (e: any) => `${e.year ?? ''}|${String(e.title).trim().toLowerCase()}`
+const seenExhibitions = new Set<string>()
+const exhibitions = [...(profile?.exhibitions ?? []), ...((await getEntryScreenings()) ?? [])]
   .filter((e: any) => e?.title)
+  .filter((e: any) => !seenExhibitions.has(exhibitionKey(e)) && seenExhibitions.add(exhibitionKey(e)))
   .sort((a: any, b: any) => (b.year ?? 0) - (a.year ?? 0))
 
 const description = excerpt(paragraphs.join(' ')) || undefined
@@ -130,14 +134,6 @@ const description = excerpt(paragraphs.join(' ')) || undefined
     color: var(--indigo);
   }
 
-  /* el primer párrafo abre con la misma voz que el encabezado del sitio */
-  .about-text p:first-child {
-    font-size: 1.375rem;
-    line-height: 1.25;
-    margin-bottom: 0.5rem;
-    text-wrap: pretty;
-  }
-
   .section-label {
     font-size: 0.8125rem;
     font-weight: 400;
@@ -224,10 +220,6 @@ const description = excerpt(paragraphs.join(' ')) || undefined
     .about-title {
       padding-bottom: 1.25rem;
       margin-bottom: 1.5rem;
-    }
-
-    .about-text p:first-child {
-      font-size: 1.25rem;
     }
 
     .about-images {

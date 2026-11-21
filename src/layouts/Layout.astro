@@ -240,19 +240,29 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
       // Scroll suave (se omite si la persona pidió menos movimiento)
+      let lenis: Lenis | undefined
       if (!reduceMotion) {
-        const lenis = new Lenis({
+        lenis = new Lenis({
           duration: 1.1,
           easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
           smoothWheel: true,
           syncTouch: false,
         })
         const raf = (time: number) => {
-          lenis.raf(time)
+          lenis!.raf(time)
           requestAnimationFrame(raf)
         }
         requestAnimationFrame(raf)
       }
+
+      // Mientras hay un visor abierto, la página de fondo no se mueve:
+      // se detiene Lenis (rueda y teclado) y se bloquea el scroll nativo (táctil).
+      document.addEventListener('scroll-lock', (event) => {
+        const locked = (event as CustomEvent<boolean>).detail
+        document.documentElement.classList.toggle('scroll-locked', locked)
+        if (locked) lenis?.stop()
+        else lenis?.start()
+      })
 
       // Reloj de Santiago (desktop + mobile)
       const clockFormat = new Intl.DateTimeFormat('en-GB', {
@@ -357,6 +367,18 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
   .lenis.lenis-stopped {
     overflow: hidden;
   }
+  /* visor abierto: la página no se desplaza y conserva el espacio de su barra */
+  html.scroll-locked {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+  }
+  html.scroll-locked body {
+    overflow: hidden;
+    touch-action: none;
+  }
+  dialog[data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
 
   *, *::before, *::after {
     box-sizing: border-box;
@@ -430,6 +452,12 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  /* imágenes con otro recorte en teléfono (Img con mobileRatio) */
+  .img-frame picture { display: contents; }
+  .img-frame.two-ratios { aspect-ratio: var(--ar); }
+  @media (max-width: 1000px) {
+    .img-frame.two-ratios { aspect-ratio: var(--ar-m); }
   }
   html.js .img-frame img {
     opacity: 0;

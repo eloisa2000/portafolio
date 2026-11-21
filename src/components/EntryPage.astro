@@ -132,6 +132,7 @@ let imageCount = 0
           image={project.coverImage}
           alt={title}
           ratio={16 / 7}
+          mobileRatio={32 / 21}
           widths={[640, 1000, 1400, 2000]}
           sizes="(max-width: 1000px) 100vw, calc(100vw - 524px)"
           eager
@@ -1095,6 +1096,7 @@ let imageCount = 0
     function openViewer(opener: HTMLButtonElement) {
       window.clearTimeout(closing)
       viewer!.showModal()
+      document.dispatchEvent(new CustomEvent('scroll-lock', { detail: true }))
       show(openers.indexOf(opener))
       const media = stage.firstElementChild as HTMLElement | null
       if (media && !reduceMotion) {
@@ -1163,8 +1165,31 @@ let imageCount = 0
       if (event.key === 'ArrowRight') show(current + 1)
     })
 
+
+    // En pantallas táctiles, deslizar hacia los lados pasa a la pieza anterior o siguiente
+    let swipe: { x: number; y: number } | null = null
+    viewer.addEventListener('touchstart', (event) => {
+      swipe = null
+      if (event.touches.length !== 1) return
+      const touch = event.touches[0]
+      const target = event.target as HTMLElement
+      // la franja de controles de un video queda libre para mover su línea de tiempo
+      if (target instanceof HTMLVideoElement && touch.clientY > target.getBoundingClientRect().bottom - 64) return
+      swipe = { x: touch.clientX, y: touch.clientY }
+    }, { passive: true })
+    viewer.addEventListener('touchend', (event) => {
+      if (!swipe) return
+      const touch = event.changedTouches[0]
+      const dx = touch.clientX - swipe.x
+      const dy = touch.clientY - swipe.y
+      swipe = null
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      if (openers.length > 1) show(current + (dx < 0 ? 1 : -1))
+    }, { passive: true })
+
     viewer.addEventListener('close', () => {
       viewer.classList.remove('is-open')
+      document.dispatchEvent(new CustomEvent('scroll-lock', { detail: false }))
       stage.replaceChildren()
       // los videos de la página que están a la vista vuelven a andar
       document.querySelectorAll<HTMLVideoElement>('.gallery-item video').forEach((v) => {

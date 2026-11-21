@@ -51,12 +51,14 @@ interface Props {
   initialGroup?: string
   /** guarda el grupo activo en la URL (#grupo) para poder compartirlo */
   useHash?: boolean
+  /** en teléfono el muro va en una sola columna (por defecto, dos) */
+  oneColumnOnMobile?: boolean
 }
 
-const { items, rows = [], label, initialGroup = 'all', useHash = false } = Astro.props
+const { items, rows = [], label, initialGroup = 'all', useHash = false, oneColumnOnMobile = false } = Astro.props
 
 // Ancho de cada columna del muro según el layout (ver CSS más abajo)
-const SIZES = '(max-width: 1000px) 50vw, (max-width: 1500px) calc((100vw - 540px) / 2), calc((100vw - 572px) / 3)'
+const SIZES = (oneColumnOnMobile ? '(max-width: 1000px) 100vw,' : '(max-width: 1000px) 50vw,') + ' (max-width: 1500px) calc((100vw - 540px) / 2), calc((100vw - 572px) / 3)'
 // En las filas las piezas tienen alto fijo; su ancho ronda este valor
 const ROW_SIZES = '(max-width: 1000px) 70vw, 560px'
 
@@ -72,13 +74,13 @@ for (const item of items) {
   else segments.push({ side: [item] })
 }
 // En las filas lado a lado cada pieza ocupa una fracción del ancho del contenido
-const sideSizes = (n: number) => ["(max-width: 1000px) ", Math.round(100 * (1 / n)), "vw, calc((100vw - 524px) * ", (1 / n).toFixed(4), ")"].join("")
+const sideSizes = (n: number) => ["(max-width: 1000px) ", oneColumnOnMobile ? 100 : Math.round(100 * (1 / n)), "vw, calc((100vw - 524px) * ", (1 / n).toFixed(4), ")"].join("")
 const T = ui[langOf(Astro.url)]
 // Las primeras piezas visibles cargan de inmediato; el resto, al acercarse
 let shown = 0
 ---
 
-<div class="wall-root" data-use-hash={useHash ? '' : undefined}>
+<div class="wall-root" data-use-hash={useHash ? '' : undefined} data-one-column={oneColumnOnMobile ? '' : undefined}>
 
   <!-- Obras por bloque: título + fila horizontal de piezas -->
   {rows.map((row) => {
@@ -91,6 +93,9 @@ let shown = 0
             {row.meta && <p class="group-meta">{row.meta}</p>}
           </div>
           <div class="group-nav">
+            {row.description && (
+              <button class="group-btn group-more" type="button" aria-expanded="false" aria-label={T.showDescription}>+</button>
+            )}
             <button class="group-btn" type="button" data-strip="prev" aria-label={T.scrollBack}>←</button>
             <button class="group-btn" type="button" data-strip="next" aria-label={T.scrollForward}>→</button>
           </div>
@@ -186,6 +191,13 @@ let shown = 0
      de arriba, de izquierda a derecha (ver layoutWall). Sin JS se queda en columnas CSS. */
   .media-wall.is-laid-out { columns: auto; }
 
+  /* una sola columna en teléfono (Arte) */
+  @media (max-width: 1000px) {
+    .wall-root[data-one-column] .media-wall { columns: 1; }
+    .wall-root[data-one-column] .media-wall.is-laid-out { columns: auto; }
+    .wall-root[data-one-column] .wall-side { grid-template-columns: minmax(0, 1fr); }
+  }
+
   .media-wall :global(.wall-cols) {
     display: flex;
     align-items: flex-start;
@@ -267,6 +279,15 @@ let shown = 0
     font-size: 1.0625rem;
     line-height: 1.5;
     color: var(--indigo);
+  }
+
+  /* el "+" que abre la descripción solo existe en teléfono */
+  .group-more { display: none; }
+
+  @media (max-width: 1000px) {
+    :global(html.js) .group-more { display: block; }
+    :global(html.js) .wall-group:not(.is-described) .group-description { display: none; }
+    :global(html.js) .wall-group:not(.is-described) .group-text:not(:has(.group-links)) { display: none; }
   }
 
   .group-links,
@@ -411,10 +432,16 @@ let shown = 0
     flex-direction: column;
     gap: 0.4rem;
     min-width: 0;
+    flex: 1 1 0;
+  }
+
+  /* en teléfono el texto ocupa todo el ancho y las flechas bajan a su propia línea */
+  @media (max-width: 1000px) {
+    .wall-viewer .viewer-foot { flex-wrap: wrap; row-gap: 0.5rem; }
+    .wall-viewer .viewer-text { flex-basis: 100%; }
   }
 
   .viewer-description {
-    max-width: 68ch;
     font-size: 0.9375rem;
     line-height: 1.45;
     color: var(--lila);
@@ -541,6 +568,8 @@ let shown = 0
   // orden original: piezas sueltas y filas "lado a lado"
   const sequence = wallEl ? (Array.from(wallEl.children) as HTMLElement[]) : []
   const twoColumns = window.matchMedia('(max-width: 1500px)')
+  const phone = window.matchMedia('(max-width: 1000px)')
+  const oneColumn = wall?.hasAttribute('data-one-column') ?? false
   const GAP = 0.06 // separación entre piezas, en anchos de columna (aprox.)
 
   // alto de una pieza medido en anchos de columna, según su proporción
@@ -551,7 +580,7 @@ let shown = 0
 
   function layoutWall() {
     if (!wallEl || sequence.length === 0) return
-    const n = twoColumns.matches ? 2 : 3
+    const n = oneColumn && phone.matches ? 1 : twoColumns.matches ? 2 : 3
     const out = document.createDocumentFragment()
     let cols: HTMLElement[] = []
     let heights: number[] = []
@@ -592,6 +621,7 @@ let shown = 0
 
   layoutWall()
   twoColumns.addEventListener('change', layoutWall)
+  phone.addEventListener('change', layoutWall)
 
   // ── Filtros: muestran un grupo de piezas a la vez ──
   const filters = Array.from(document.querySelectorAll<HTMLButtonElement>('.wall-filter'))
@@ -657,6 +687,15 @@ let shown = 0
     strip.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => updateStrip(section), { once: true }))
   })
   window.addEventListener('resize', updateStrips)
+
+  // "+" junto al título: abre y cierra la descripción de la obra (en teléfono)
+  document.querySelectorAll<HTMLButtonElement>('.group-more').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const open = btn.closest('.wall-group')!.classList.toggle('is-described')
+      btn.setAttribute('aria-expanded', String(open))
+      btn.textContent = open ? '−' : '+'
+    })
+  })
   updateStrips()
 
   // Enlace directo a un grupo: /art#photography
@@ -775,6 +814,7 @@ let shown = 0
     window.clearTimeout(closing)
     wallVideos.forEach((v) => v.pause())
     viewer.showModal()
+    document.dispatchEvent(new CustomEvent('scroll-lock', { detail: true }))
     show(visible().indexOf(opener))
     const media = stage?.firstElementChild as HTMLElement | null
     if (media && !reduceMotion) {
@@ -840,8 +880,31 @@ let shown = 0
     if (event.key === 'ArrowRight') show(current + 1)
   })
 
+
+  // En pantallas táctiles, deslizar hacia los lados pasa a la pieza anterior o siguiente
+  let swipe: { x: number; y: number } | null = null
+  viewer?.addEventListener('touchstart', (event) => {
+    swipe = null
+    if (event.touches.length !== 1) return
+    const touch = event.touches[0]
+    const target = event.target as HTMLElement
+    // la franja de controles de un video queda libre para mover su línea de tiempo
+    if (target instanceof HTMLVideoElement && touch.clientY > target.getBoundingClientRect().bottom - 64) return
+    swipe = { x: touch.clientX, y: touch.clientY }
+  }, { passive: true })
+  viewer?.addEventListener('touchend', (event) => {
+    if (!swipe) return
+    const touch = event.changedTouches[0]
+    const dx = touch.clientX - swipe.x
+    const dy = touch.clientY - swipe.y
+    swipe = null
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    show(current + (dx < 0 ? 1 : -1))
+  }, { passive: true })
+
   viewer?.addEventListener('close', () => {
     viewer.classList.remove('is-open')
+    document.dispatchEvent(new CustomEvent('scroll-lock', { detail: false }))
     const opener = visible()[current]
     // al cerrar se corta el video (y su sonido) y vuelven a andar los del muro
     stage?.replaceChildren()

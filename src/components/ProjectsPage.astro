@@ -271,7 +271,7 @@ const shareImage = projects[0]?.coverImage
     /* Los filtros pasan a ser dos filas que se deslizan de lado */
     .filters {
       flex-direction: column;
-      gap: 0.55rem;
+      gap: 0.1rem;
       padding-top: 1rem;
     }
 
@@ -290,7 +290,7 @@ const shareImage = projects[0]?.coverImage
       scrollbar-width: none;
       /* la fila llega hasta el borde de la pantalla */
       margin: 0 calc(var(--gutter) * -1);
-      padding: 0.15rem var(--gutter);
+      padding: 0 var(--gutter);
     }
 
     .filter-list::-webkit-scrollbar { display: none; }
@@ -301,8 +301,8 @@ const shareImage = projects[0]?.coverImage
     .filter-all { order: -1; }
 
     .filter-btn {
-      font-size: 1.125rem;
-      line-height: 1.3;
+      font-size: 1rem;
+      line-height: 1.2;
     }
 
     .projects-grid { gap: 2.25rem 1.5rem; }

@@ -108,7 +108,7 @@ const description = T.artDescription(names)
 
   {allPieces.length === 0 && <p class="empty-note">{T.empty}</p>}
 
-  <MediaWall items={items} rows={rows} label={T.nav.art} initialGroup={categories.length > 1 ? first : 'all'} useHash />
+  <MediaWall items={items} rows={rows} label={T.nav.art} initialGroup={categories.length > 1 ? first : 'all'} useHash oneColumnOnMobile />
 </Layout>
 
 <style>

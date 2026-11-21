@@ -11,6 +11,8 @@ interface Props {
   sizes?: string
   /** ancho / alto. Si se pasa, la imagen se recorta a esa proporción. */
   ratio?: number
+  /** proporción (ancho / alto) en pantallas de hasta 1000px; la imagen se recorta distinto en teléfono */
+  mobileRatio?: number
   eager?: boolean
   class?: string
   [key: string]: any
@@ -22,6 +24,7 @@ const {
   widths = [640, 960, 1400, 2000],
   sizes = '100vw',
   ratio,
+  mobileRatio,
   eager = false,
   class: cls,
   ...rest
@@ -31,31 +34,44 @@ const {
 const natural = image?.crop ? undefined : image?.dims?.aspectRatio
 const r = ratio ?? natural
 
-function make(w: number) {
+function make(w: number, cut = ratio) {
   let b = urlFor(image).width(w).auto('format').quality(80)
-  if (ratio) b = b.height(Math.round(w / ratio)).fit('crop')
+  if (cut) b = b.height(Math.round(w / cut)).fit('crop')
   return b.url()
 }
 
 const srcset = widths.map((w) => `${make(w)} ${w}w`).join(', ')
+const mobileSrcset = mobileRatio ? widths.map((w) => `${make(w, mobileRatio)} ${w}w`).join(', ') : undefined
 const baseW = widths[Math.min(1, widths.length - 1)]
 
+const loadAttrs = {
+  loading: eager ? 'eager' : 'lazy',
+  fetchpriority: eager ? 'high' : undefined,
+  decoding: 'async',
+} as const
+
 const style = [
-  r ? `aspect-ratio:${r}` : '',
+  r && !mobileRatio ? `aspect-ratio:${r}` : '',
+  mobileRatio ? `--ar:${r};--ar-m:${mobileRatio}` : '',
   image?.lqip ? `background-image:url(${image.lqip})` : '',
 ].filter(Boolean).join(';')
 ---
 
-<span class:list={['img-frame', cls]} style={style} {...rest}>
-  <img
-    src={make(baseW)}
-    srcset={srcset}
-    sizes={sizes}
-    alt={alt}
-    width={r ? baseW : undefined}
-    height={r ? Math.round(baseW / r) : undefined}
-    loading={eager ? 'eager' : 'lazy'}
-    fetchpriority={eager ? 'high' : undefined}
-    decoding="async"
-  />
+<span class:list={['img-frame', cls, mobileRatio && 'two-ratios']} style={style} {...rest}>
+  {mobileSrcset ? (
+    <picture>
+      <source media="(max-width: 1000px)" srcset={mobileSrcset} sizes={sizes} />
+      <img src={make(baseW)} srcset={srcset} sizes={sizes} alt={alt} {...loadAttrs} />
+    </picture>
+  ) : (
+    <img
+      src={make(baseW)}
+      srcset={srcset}
+      sizes={sizes}
+      alt={alt}
+      width={r ? baseW : undefined}
+      height={r ? Math.round(baseW / r) : undefined}
+      {...loadAttrs}
+    />
+  )}
 </span>
