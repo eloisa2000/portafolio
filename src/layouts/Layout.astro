@@ -106,7 +106,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} translate={activeSection === 'about' ? 'no' : undefined}>
   <head>
     <script is:inline>
       // Lo antes posible: fija el esquema oscuro sobre <html> para que no haya
@@ -127,7 +127,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
     <meta name="description" content={description} />
     <meta name="author" content={name} />
     {/* About en inglés: los títulos de exposiciones van en español y el navegador cree que la página está en otro idioma y ofrece traducirla */}
-    {activeSection === 'about' && lang === 'en' && <meta name="google" content="notranslate" />}
+    {activeSection === 'about' && <meta name="google" content="notranslate" />}
     {canonical && <link rel="canonical" href={canonical} />}
     {Astro.site && <link rel="alternate" hreflang={lang} href={new URL(Astro.url.pathname, Astro.site).href} />}
     {Astro.site && <link rel="alternate" hreflang={other} href={new URL(otherHref, Astro.site).href} />}
@@ -178,7 +178,11 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
         <a href={href('/about', lang)} class={activeSection === 'about' ? 'active' : ''}>{T.nav.about}</a>
       </nav>
       <div class="nav-right">
-        <a class="nav-lang" href={otherHref} hreflang={other} lang={other} aria-label={T.switchLabel}>{T.switchTo}</a>
+        <a class="nav-studio" href="https://1000gracias.studio" target="_blank" rel="noopener" aria-label="1000gracias studio">
+          <svg width="15" height="15" viewBox="0 0 163 163" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M142.353 19.9421C176.155 53.7445 165.027 97.421 131.224 131.223C97.4219 165.026 53.7454 176.154 19.943 142.352C-13.8595 108.549 -1.34035 66.2637 32.4621 32.4612C66.2646 -1.34126 108.55 -13.8604 142.353 19.9421Z" fill="#D71B1B"/>
+          </svg>
+        </a>
         <button class="icon-btn" id="font-toggle" aria-label={T.fontToggle}>
           <svg class="arrow-sans" width="23" height="14" viewBox="0 0 23 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6.64062 13.2812L0 6.64062L6.64062 0L8.28125 1.65039L4.49219 5.44922H18.3984L14.5898 1.65039L16.2402 0L22.8711 6.64062L16.2402 13.2812L14.5898 11.6309L18.3984 7.8418H4.49219L8.28125 11.6309L6.64062 13.2812Z" fill="currentColor"/>
@@ -198,6 +202,7 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
             <path d="M5.34545 14.2206L3.32104 13.5L1.68 12.1164L0 9.23152V7.12727V5.02303L1.68 2.10424L3.5 1.03058L5.34545 0H8.65454L10.517 1.03058L12.337 2.10424L14 5.02303V7.12727V9.23152L12.337 12.1164L10.6959 13.5L8.65454 14.2206H5.34545Z" fill="currentColor"/>
           </svg>
         </button>
+        <a class="nav-lang" href={otherHref} hreflang={other} lang={other} aria-label={T.switchLabel}>{T.switchTo}</a>
       </div>
     </header>
 
@@ -557,6 +562,10 @@ const ldBlocks = [personLd, jsonLd].filter(Boolean)
   }
 
   .nav-lang { font-size: 1.25rem; color: var(--indigo); cursor: pointer; }
+  /* submark de 1000gracias: enlace al estudio */
+  .nav-studio { display: flex; align-items: center; padding: 0.6rem 0.35rem; margin: -0.6rem -0.35rem; }
+  .nav-studio svg { display: block; transition: transform 0.25s ease; }
+  .nav-studio:hover svg { transform: rotate(90deg); }
 
   /* PAGE BODY */
   .page-body {
