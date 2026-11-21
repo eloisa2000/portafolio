@@ -1177,42 +1177,15 @@ let imageCount = 0
       if (target instanceof HTMLVideoElement && touch.clientY > target.getBoundingClientRect().bottom - 64) return
       swipe = { x: touch.clientX, y: touch.clientY }
     }, { passive: true })
-    viewer.addEventListener('touchmove', (event) => {
-      if (!swipe || !stage || event.touches.length !== 1) return
-      const dx = event.touches[0].clientX - swipe.x
-      const dy = event.touches[0].clientY - swipe.y
-      // la pieza sigue al dedo mientras el gesto sea horizontal
-      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.5) stage.style.transform = `translateX(${dx}px)`
-    }, { passive: true })
     viewer.addEventListener('touchend', (event) => {
       if (!swipe) return
       const touch = event.changedTouches[0]
       const dx = touch.clientX - swipe.x
       const dy = touch.clientY - swipe.y
       swipe = null
-      const dragged = !!stage?.style.transform
-      if (stage) stage.style.transform = ''
-      if (openers.length > 1 && Math.abs(dx) >= 48 && Math.abs(dx) >= Math.abs(dy) * 1.5) return slideTo(dx < 0 ? 1 : -1, dragged ? dx : 0)
-      // gesto corto: la pieza vuelve a su lugar
-      if (dragged) stage!.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 180, easing: 'ease-out' })
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      if (openers.length > 1) show(current + (dx < 0 ? 1 : -1))
     }, { passive: true })
-
-    // Carrusel: la pieza sale completa hacia el lado del gesto y la siguiente entra desde el otro
-    function slideTo(dir: number, from = 0) {
-      if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return show(current + dir)
-      const width = window.innerWidth
-      const out = stage.animate(
-        [{ transform: `translateX(${from}px)` }, { transform: `translateX(${-dir * width}px)` }],
-        { duration: 200, easing: 'ease-in' }
-      )
-      out.onfinish = () => {
-        show(current + dir)
-        stage.animate(
-          [{ transform: `translateX(${dir * width}px)` }, { transform: 'none' }],
-          { duration: 280, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }
-        )
-      }
-    }
 
 
     viewer.addEventListener('close', () => {
