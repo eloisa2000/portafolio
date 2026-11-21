@@ -100,7 +100,7 @@ export async function getEntry(type: Collection, slug: string) {
       contextAndChallenge_es, solution_es, results_es,
       gallery[]{ _type, _key, caption, caption_es, asset, crop, hotspot, videoUrl, isPortrait, halfWidth, ${IMG_META} },
       works[]{
-        _key, title, authors, link,
+        _key, title, title_en, authors, link,
         items[]{ _key, _type, asset, crop, hotspot, ${IMG_META}, "videoUrl": file.asset->url, poster{ asset, ${IMG_META} } }
       },
       link, linkLabel,

@@ -39,6 +39,7 @@ const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || ite
 
 // Trabajos de estudiantes: cada uno es un bloque con título, autores y su fila de piezas
 const workRows: WallRow[] = (project.works ?? [])
+  .map((work: any) => ({ ...work, title: lang === 'en' ? work.title_en || work.title : work.title }))
   .map((work: any) => ({
     groups: ['works'],
     title: work.title,

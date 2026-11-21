@@ -112,6 +112,7 @@ export default defineType({
           type: 'object',
           fields: [
             defineField({ name: 'title', title: 'Título', type: 'string', validation: (r) => r.required() }),
+            defineField({ name: 'title_en', title: 'Título (EN)', description: 'Opcional. Solo si el título se traduce; si queda vacío se usa el de arriba.', type: 'string' }),
             defineField({ name: 'authors', title: 'Autores', description: 'Nombres separados por coma.', type: 'string' }),
             defineField({ name: 'link', title: 'Enlace (opcional)', type: 'url' }),
             defineField({
