@@ -2,6 +2,8 @@
 // Página individual de un proyecto (Work) o de un workshop: misma estructura para ambos.
 import Layout from '../layouts/Layout.astro'
 import Img from './Img.astro'
+import MediaWall from './MediaWall.astro'
+import type { WallRow } from './MediaWall.astro'
 import { getProjects, getWorkshops, slugOf, urlFor } from '../lib/sanity'
 import { fmtRole, excerpt } from '../lib/labels'
 import { fmtLinkLabel, fmtSector, href, langOf, loc, slugFor, ui } from '../lib/i18n'
@@ -34,6 +36,24 @@ const twoCol = (context || solution) && results?.length > 0
 
 // Imágenes válidas (descarta las que quedaron sin asset subido en Sanity)
 const gallery = (project.gallery ?? []).filter((item: any) => item?.asset || item?.videoUrl)
+
+// Trabajos de estudiantes: cada uno es un bloque con título, autores y su fila de piezas
+const workRows: WallRow[] = (project.works ?? [])
+  .map((work: any) => ({
+    groups: ['works'],
+    title: work.title,
+    meta: work.authors,
+    link: work.link,
+    items: (work.items ?? [])
+      .filter((item: any) => item?.asset || item?.videoUrl)
+      .map((item: any) => {
+        const caption = [work.title, work.authors].filter(Boolean).join(' — ')
+        return item.videoUrl
+          ? { kind: 'video', groups: ['works'], videoUrl: item.videoUrl, poster: item.poster, title: caption }
+          : { kind: 'image', groups: ['works'], image: item, title: caption }
+      }),
+  }))
+  .filter((row: WallRow) => row.items.length > 0)
 
 // Los workshops se etiquetan con tags; los proyectos, con role
 const roles = ((isWorkshop ? project.tags : project.role) ?? []).map((r: string) => fmtRole(r, lang))
@@ -183,6 +203,13 @@ let imageCount = 0
       )}
 
     </div>
+
+    <!-- Trabajos de estudiantes, uno por bloque -->
+    {workRows.length > 0 && (
+      <div class="project-works">
+        <MediaWall items={[]} rows={workRows} label={title} />
+      </div>
+    )}
 
     <!-- Resto de la galería, hasta el final -->
     {gallery.length > 0 && (
@@ -471,6 +498,10 @@ let imageCount = 0
   }
 
   /* GALERÍA — el protagonista */
+  .project-works {
+    margin-top: 3rem;
+  }
+
   .project-gallery {
     display: flex;
     flex-wrap: wrap;

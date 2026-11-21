@@ -99,6 +99,43 @@ export default defineType({
         }),
       ],
     }),
+    defineField({
+      name: 'works',
+      title: 'Trabajos de estudiantes',
+      description: 'Cada trabajo se muestra como un bloque: título y autores arriba, y sus piezas (clips y capturas) en una fila.',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          name: 'work',
+          title: 'Trabajo',
+          type: 'object',
+          fields: [
+            defineField({ name: 'title', title: 'Título', type: 'string', validation: (r) => r.required() }),
+            defineField({ name: 'authors', title: 'Autores', description: 'Nombres separados por coma.', type: 'string' }),
+            defineField({ name: 'link', title: 'Enlace (opcional)', type: 'url' }),
+            defineField({
+              name: 'items',
+              title: 'Piezas',
+              type: 'array',
+              of: [
+                defineArrayMember({ type: 'image', options: { hotspot: true } }),
+                defineArrayMember({
+                  name: 'workVideo',
+                  title: 'Clip',
+                  type: 'object',
+                  fields: [
+                    defineField({ name: 'file', title: 'Archivo (.mp4)', type: 'file', options: { accept: 'video/mp4' } }),
+                    defineField({ name: 'poster', title: 'Portada del clip', description: 'Un cuadro del clip; define su proporción.', type: 'image' }),
+                  ],
+                  preview: { select: { media: 'poster' }, prepare: ({ media }) => ({ title: 'Clip', media }) },
+                }),
+              ],
+            }),
+          ],
+          preview: { select: { title: 'title', subtitle: 'authors' } },
+        }),
+      ],
+    }),
     defineField({ name: 'link', title: 'Enlace', type: 'url' }),
     defineField({ name: 'linkLabel', title: 'Etiqueta del enlace', description: 'Ej: Site, Prototype. Por defecto: Site.', type: 'string' }),
     defineField({
