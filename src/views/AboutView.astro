@@ -21,8 +21,12 @@ const paragraphs = (loc(profile, 'aboutText', lang) ?? '')
 
 // "1000gracias" dentro del texto enlaza al sitio del estudio
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+// Glorp Corp enlaza a su proyecto dentro del portafolio
+const glorpHref = `${lang === 'es' ? '/es' : ''}/work/ud-esta-aqui/`
 const linked = (t: string) =>
-  esc(t).replace(/1000\s?gracias/gi, (m) => `<a href="https://1000gracias.studio" target="_blank" rel="noopener">${m}</a>`)
+  esc(t)
+    .replace(/1000\s?gracias/gi, (m) => `<a href="https://1000gracias.studio" target="_blank" rel="noopener">${m}</a>`)
+    .replace(/Glorp Corp/, (m) => `<a href="${glorpHref}">${m}</a>`)
 
 const likesTitle = loc(profile, 'likesTitle', lang) ?? T.likes
 const likes = (loc(profile, 'likes', lang) ?? []).filter((l: string) => l && l.trim().length > 0)
@@ -33,6 +37,8 @@ const aboutImages = (profile?.aboutImages ?? []).filter((img: any) => img?.asset
 // Exhibitions & Screenings: solo las del perfil, en el orden en que están en Sanity.
 // Las proyecciones de un proyecto (p. ej. Glorp Corp) se muestran solo en su página.
 const exhibitions = (profile?.exhibitions ?? []).filter((e: any) => e?.title)
+// Hitos destacados del colectivo; la lista completa está en la página del proyecto
+const collective = (profile?.collectiveExhibitions ?? []).filter((e: any) => e?.title)
 
 const description = excerpt(paragraphs.join(' ')) || undefined
 ---
@@ -89,6 +95,25 @@ const description = excerpt(paragraphs.join(' ')) || undefined
               <span class="exhibition-place">{[e.venue, e.city].filter(Boolean).join(', ')}</span>
             </li>
           ))}
+        </ul>
+      </section>
+    )}
+
+    {collective.length > 0 && (
+      <section class="exhibitions-section collective-section">
+        <h2 class="section-label">{T.withCollective}</h2>
+        <ul class="exhibitions-list">
+          {collective.map((e: any) => (
+            <li class="exhibition-row">
+              <span class="exhibition-year">{e.year}</span>
+              <span class="exhibition-name">{lang === 'en' ? e.title_en || e.title : e.title}</span>
+              <span class="exhibition-place">{[e.venue, e.city].filter(Boolean).join(', ')}</span>
+            </li>
+          ))}
+          <li class="exhibition-row">
+            <span class="exhibition-year"></span>
+            <a class="exhibition-name exhibition-more" href={glorpHref}>{T.allScreenings} →</a>
+          </li>
         </ul>
       </section>
     )}
@@ -208,6 +233,17 @@ const description = excerpt(paragraphs.join(' ')) || undefined
     font-size: 1.0625rem;
     line-height: 1.35;
     color: var(--indigo);
+  }
+
+  .collective-section {
+    margin-top: 2.5rem;
+  }
+
+  .exhibition-more {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.18em;
   }
 
   .exhibition-year {

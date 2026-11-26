@@ -74,6 +74,8 @@ export const ui = {
     about: 'About',
     likes: 'Likes',
     exhibitions: 'Exhibitions & Screenings',
+    withCollective: 'With Glorp Corp',
+    allScreenings: 'See all screenings',
     artDescription: (names: string[]) =>
       names.length ? `Personal work by Eloísa Nieto: ${names.join(', ')}.` : 'Personal work by Eloísa Nieto.',
     artCategories: 'Art categories',
@@ -133,6 +135,8 @@ export const ui = {
     about: 'Sobre mí',
     likes: 'Intereses',
     exhibitions: 'Exposiciones y proyecciones',
+    withCollective: 'Con Glorp Corp',
+    allScreenings: 'Ver todas las proyecciones',
     artDescription: (names: string[]) =>
       names.length ? `Obra personal de Eloísa Nieto: ${names.join(', ')}.` : 'Obra personal de Eloísa Nieto.',
     artCategories: 'Categorías de arte',
